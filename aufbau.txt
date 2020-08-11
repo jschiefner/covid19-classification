@@ -1,0 +1,63 @@
+# load required modules
+
+# prepare images
+
+# split data into train & test
+
+# setup pretrained cnn # set to non trainable
+
+# create top layer
+
+# train
+
+# create peformance metrics
+
+# save model
+
+
+Bonus Ziele:
+#Entwickeln Sie Möglichkeiten darzustellen, welche Features zu einer bestimmten Klassifikation beigetragen haben. (Interpretable AI)
+
+#Entwickeln Sie Verfahren zur feature extraction und preprocessing
+
+
+------
+Mögliche Models
+https://keras.io/api/applications/#:~:text=Keras%20Applications%20are%20deep%20learning,They%20are%20stored%20at%20~%2F.
+
+------
+
+
+predict.py -i images -o results.csv
+input path to folder with images
+eventuell single image mode? 
+
+
+
+
+## aufbau paper
+
+# abstract?
+# einführung: 
+    motivation
+    struktur: begrenzte menge an bildern deshalb transfer learning
+    data augmentation
+    welche netzwerke kommen in frage und wieso
+    disclaimer nicht für medizinische anwendung geeignet
+
+# framework
+    aufbau transferlearning
+    untrainable
+    training rate und co
+    auf welche cnn's aufgebaut
+# ergebnisse
+    performance eval der verschiedenen netzwerke
+    paar diagramme mit recall und co
+    heatmaps, confusion matrix
+    bilder die feature extraction zeigen
+
+# fazit
+    unsere lösung entspricht gängigen methoden
+    
+
+
