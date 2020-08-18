@@ -3,6 +3,7 @@ print('import lots of stuff')
 
 
 from tf_explain.core.grad_cam import GradCAM
+from tf_explain.callbacks.grad_cam import GradCAMCallback
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import VGG16, NASNetLarge, MobileNetV2
@@ -18,6 +19,7 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
+import tensorflow as tf
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,6 +28,9 @@ import cv2
 import time
 import os
 
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.compat.v1.Session(config=config)
 
 cur_time_secs = lambda : int(round(time.time() * 1000 * 1000))
 
@@ -90,9 +95,6 @@ for net in nets:
     for layer in baseModel.layers:
         layer.trainable = False
     baseModels.append(baseModel) # downloads weights.h5 file
-
-
-
 
 for baseModel in baseModels:
 
