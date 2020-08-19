@@ -118,7 +118,7 @@ for layer in baseModel.layers:
 print('compile model')
 
 
-
+model = Model(inputs=baseModel.input, outputs=headModel)
 opt = Adam(lr=INIT_LR, decay=INIT_LR / EPOCHS)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
