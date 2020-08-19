@@ -1,5 +1,4 @@
 # %% imports
-
 print('import lots of stuff')
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -12,6 +11,7 @@ from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
+import tensorflow as tf
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -22,6 +22,10 @@ import numpy as np
 import argparse
 import cv2
 import os
+
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.compat.v1.Session(config=config)
 
 # %% arg "parse"
 
@@ -105,10 +109,8 @@ headModel = Dense(64, activation='relu')(headModel)
 headModel = Dropout(0.5)(headModel)
 headModel = Dense(2, activation='softmax')(headModel)
 
-# place the head FC model on top of base model (this will become the actuel model we will train)
-model = Model(inputs=baseModel.input, outputs=headModel)
-
-# loop over all layers in the base model and freeze them so they iwll *not* be updated during the first training process
+# loop over all layers in the base model and freeze them so they
+# will *not* be updated during the first training process
 for layer in baseModel.layers:
     layer.trainable = False
 
@@ -119,8 +121,9 @@ print('compile model')
 
 opt = Adam(lr=INIT_LR, decay=INIT_LR / EPOCHS)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
-exit(0)
-# train network head
+
+# train network head, H not needed for now
+# holds useful information about training progress
 H = model.fit(
     trainAug.flow(trainX, trainY, batch_size=BS),
     steps_per_epoch=len(trainX) // BS,
@@ -129,6 +132,49 @@ H = model.fit(
     epochs=EPOCHS,
 )
 
+
+# %% evaluate model
+print("[INFO] evaluating network...")
+
+predIDxs = model.predict(testX, batch_size=BS)
+
+# for each image in the testing set we need to find the index of the
+# label with corresponding largest predicted probability
+predIDxs = np.argmax(predIDxs, axis=1)
+
+# show a nicely formatted classification report
+print(classification_report(testY.argmax(axis=1), predIDxs, target_names=lb.classes_))
+# compute the confusion matrix and use it to derive the raw
+# accuracy, sensitivity and specificity
+cm = confusion_matrix(testY.argmax(axis=1), predIDxs)
+total = sum(sum(cm))
+acc = (cm[0, 0] + cm[1, 1]) / total
+sensitivity = cm[0, 0] / (cm[1, 0] + cm[1, 1])
+specificity = cm[1, 1] / (cm[1, 0] + cm[1, 1])
+
+# show the confusion matrix, accuracy, sensitivity and specificity
+print(cm)
+print("acc: {:.4f}".format(acc))
+print("sensitivity: {:.4f}".format(sensitivity))
+print("specificity: {:.4f}".format(specificity))
+
+# %% plot training loss and accuracy
+
+N = EPOCHS
+plt.style.use("ggplot")
+plt.figure()
+plt.plot(np.arange(0, N), H.history['loss'], label='train_loss')
+plt.plot(np.arange(0, N), H.history['val_loss'], label='val_loss')
+plt.plot(np.arange(0, N), H.history['accuracy'], label='train_accuracy')
+plt.plot(np.arange(0, N), H.history['val_accuracy'], label='val_accuracy')
+plt.title('Training Loss and Accuracy on Covid-19 Dataset')
+plt.xlabel('Epoch #')
+plt.ylabel('Loss/Accuracy')
+plt.legend(loc='lower left')
+plt.savefig(args['plot'])
+
+# %% serialize model
+print('[INFO] saving covid19 detector model')
 # todo XX
 XX= 1
 
