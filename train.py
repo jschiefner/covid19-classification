@@ -2,7 +2,7 @@
 print('import lots of stuff')
 
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import VGG16
+from tensorflow.keras.applications import VGG16, NASNetLarge, MobileNetV2
 from tensorflow.keras.layers import AveragePooling2D
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import Flatten
@@ -37,8 +37,8 @@ print('prepare data')
 metadata = pd.read_csv('metadata.csv', usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
 # metadata = metadata[100:200] # for now only use 100 samples (5 positive, 95 negative)
 
-# covid_list = metadata[metadata['Covid'] == True]
-# healthy_list = metadata[metadata['Covid'] == False]
+covid_list = metadata[metadata['Covid'] == True]
+healthy_list = metadata[metadata['Covid'] == False]
 
 data = []
 labels = []
@@ -66,13 +66,10 @@ labels = to_categorical(labels)
 # datasplit
 (trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.2, stratify=labels, random_state=42)
 
-# initialize the training data augmentation object
-trainAug = ImageDataGenerator(rotation_range=15, fill_mode='nearest')
+# %% create models
+print('generate models')
 
-# %% VGGnet model
-print('generate model')
-
-baseModel = VGG16(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3))) # downloads weights.h5 file
+baseModel = VGG16(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
 
 # construct head of model that will be placed on top of the base model
 headModel = baseModel.output
@@ -82,12 +79,13 @@ headModel = Dense(64, activation='relu')(headModel)
 headModel = Dropout(0.5)(headModel)
 headModel = Dense(2, activation='softmax')(headModel)
 
-# place the head FC model on top of base model (this will become the actual model we will train)
-model = Model(inputs=baseModel.input, outputs=headModel)
-
-# loop over all layers in the base model and freeze them so they will *not* be updated during the first training process
+# loop over all layers in the base model and freeze them so they
+# will *not* be updated during the first training process
 for layer in baseModel.layers:
     layer.trainable = False
+
+# place the head FC model on top of base model (this will become the actual model we will train)
+model = Model(inputs=baseModel.input, outputs=headModel)
 
 # %% compiling the model
 print('compile model')
@@ -98,10 +96,13 @@ INIT_LR = 1e-3
 EPOCHS = 25
 BS = 8
 
+# initialize the training data augmentation object
+trainAug = ImageDataGenerator(rotation_range=15, fill_mode='nearest')
 opt = Adam(lr=INIT_LR, decay=INIT_LR / EPOCHS)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
-# train network head
+# train network head, H not needed for now
+# holds useful information about training progress
 H = model.fit(
     trainAug.flow(trainX, trainY, batch_size=BS),
     steps_per_epoch=len(trainX) // BS,
@@ -110,8 +111,9 @@ H = model.fit(
     epochs=EPOCHS,
 )
 
-# evaluate model
+# %% evaluate model
 print("[INFO] evaluating network...")
+
 predIDxs = model.predict(testX, batch_size=BS)
 
 # for each image in the testing set we need to find the index of the
@@ -152,33 +154,3 @@ plt.savefig(args['plot'])
 # %% serialize model
 print('[INFO] saving covid19 detector model')
 model.save(args['model'], save_format='h5')
-
-
-# %% use model
-print('[INFO] using covid19 detector model')
-
-class color:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    END = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-def color_bool(b):
-    if b:
-        return f"{color.OKGREEN}True {color.END}"
-    else:
-        return f"{color.FAIL}False{color.END}"
-
-for idx, (file, covid) in metadata.iterrows():
-    test_image = cv2.imread(f'images/{file}')
-    test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB)
-    test_image = cv2.resize(test_image, (224, 224))
-    test = np.array([test_image])
-    prediction = model.predict(test)
-    predicted = prediction[0, 0] > prediction[0, 1]
-    if covid or covid != predicted:
-        print(f'expected: {color_bool(covid)} found: {color_bool(predicted)} for file: {file}')
