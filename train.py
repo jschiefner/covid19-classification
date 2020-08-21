@@ -1,7 +1,7 @@
 # %% parse arguments
 
 from argparse import ArgumentParser
-from os import path
+from os import path, mkdir
 
 parser = ArgumentParser()
 parser.add_argument("-i","--input", required=True, help="path to folder containing the xray images")
@@ -183,6 +183,9 @@ else:
     epoch = len(model.history.epoch)
     print(f'[INFO] epoch: {epoch}')
     modelData = pd.DataFrame(model.history.history)
+
+if not path.exists('models'):
+    mkdir('models') # create models directory if it doesnt exist yet
 modelPath = f'models/{args["model"]}_{epoch}.h5'
 csvPath = f'models/{args["model"]}.csv'
 print(f'[INFO] saving model to: {modelPath}, saving csv to: {csvPath}')
