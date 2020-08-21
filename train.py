@@ -4,8 +4,6 @@ from argparse import ArgumentParser
 from os import path
 
 parser = ArgumentParser()
-#parser.add_argument("-i","--input", required=True, help="path to folder containing the xray images")
-#parser.add_argument("-d", "--dataset", required=True, help="input metadata.csv")
 parser.add_argument('dataset', help='file to input folder')
 parser.add_argument("-m","--model", default="VGG16", help="specify optional network")
 args = vars(parser.parse_args())
