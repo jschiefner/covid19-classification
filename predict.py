@@ -30,23 +30,21 @@ outpath, ext = path.splitext(args['output'])
 if len(ext) == 0:
     args['output'] = f'{outpath}.csv'
 
-# verify model path
-modelDataPath = f'models/{args["model"]}.csv'
-if not path.exists(modelDataPath):
-    print(
-        f'[ERROR] the model "{args["model"]}" has not been trained yet.',
-        'Please train the model first before predicting with it.',
-    )
-    exit(1)
+# check if multiple models given, its ensemble classification then
 
-# %% load model
+models = args['model'].split(" ")
+number_of_models = len(models)
 
-modelData = pd.read_csv(modelDataPath, index_col=0)
-epochs = len(modelData)
-print(f'[INFO] model "{args["model"]}" was trained for {epochs} epochs')
-modelPath = f'models/{args["model"]}_{epochs}.h5'
-model = load_model(modelPath)
-print(f'[INFO] successfully loaded "{modelPath}"')
+# verify model paths
+modelDataPaths = []
+for model in models:
+    modelDataPaths.append(f'models/{model}.csv')
+    if not path.exists(modelDataPaths[-1]):
+        print(
+            f'[ERROR] the model "{model}" has not been trained yet.',
+            'Please train the model first before predicting with it.',
+        )
+        exit(1)
 
 # %% load images
 
@@ -61,16 +59,42 @@ for file in imageList:
 print(f'[INFO] successfully loaded {len(data)} images from "{args["dataset"]}" directory.')
 data = np.array(data) / 255.0
 
-# %% make prediction
+# %% load models
+predictionsList = []
+for modelDataPath, model in zip(modelDataPaths,models):
+    modelData = pd.read_csv(modelDataPath, index_col=0)
+    epochs = len(modelData)
+    print(f'[INFO] model "{model}" was trained for {epochs} epochs')
+    modelPath = f'models/{model}_{epochs}.h5'
+    model = load_model(modelPath)
+    print(f'[INFO] successfully loaded "{modelPath}"')
 
-predictions = model.predict(data)
+    # %% make prediction
+
+    predictionsList.append(model.predict(data))
+
+print(f'[INFO] predictions have been calculated')
+
+# save prediction to output file
 fileNames = [path.basename(file) for file in imageList]
 outputDict = {
-    'File': fileNames,
-    'Covid': [np.argmax(prediction) == 0 for prediction in predictions],
-    'Covid (probability)': predictions[:,0],
-    'No Finding (probabilty)': predictions[:,1],
-}
+        'File': fileNames
+    }
+
+for predictions, model in zip(predictionsList,models):
+    outputDict.update({f'Covid [{model}]': [np.argmax(prediction) == 0 for prediction in predictions]})
+
+#ensemble stuff here
+outputDict.update({f'Covid [Ensemble Majority]': "soon TM"})
+
+for predictions, model in zip(predictionsList,models):
+    outputDict.update({f'Covid (probability)[{model}]': predictions[:, 0]})
+
+for predictions, model in zip(predictionsList,models):
+    outputDict.update({f'No Finding (probability)[{model}]': predictions[:, 1]})
+
 df = pd.DataFrame(outputDict)
 df.set_index('File')
-df.to_csv(args['output'], index=False)
+df.to_csv(f'{args["output"]}', index=False)
+
+print(f'[INFO] Predictions have been saved to {args["output"]}')
