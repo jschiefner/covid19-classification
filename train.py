@@ -4,19 +4,15 @@ from argparse import ArgumentParser
 from os import path
 
 parser = ArgumentParser()
-parser.add_argument("-i","--input", required=True, help="path to folder containing the xray images")
-parser.add_argument("-d", "--dataset", required=True, help="input metadata.csv")
+#parser.add_argument("-i","--input", required=True, help="path to folder containing the xray images")
+#parser.add_argument("-d", "--dataset", required=True, help="input metadata.csv")
+parser.add_argument('dataset', help='file to input folder')
 parser.add_argument("-m","--model", default="VGG16", help="specify optional network")
 args = vars(parser.parse_args())
 
-# input check
-if not path.exists(args['input']):
-    print(f'[ERROR] the path "{args["input"]}" does not exist. Please supply a valid input folder.')
-    exit(1)
-
 # metadata check
 if not path.exists(args['dataset']):
-    print(f'[ERROR] the path "{args["dataset"]}" does not exist. Please supply a valid metadata file.')
+    print(f'[ERROR] the path "{args["dataset"]}" does not exist. Please supply a valid input folder.')
     exit(1)
 
 # model check
@@ -121,7 +117,7 @@ if trainEpochs <= 0:
 # %% prepare data
 print('[INFO] prepare data')
 
-metadata = pd.read_csv(args['dataset'], usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
+metadata = pd.read_csv(path.join(args['dataset'], "metadata.csv"), usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
 metadata = metadata[1000:1100] # for now only use 100 samples (10 positive, 90 negative)
 
 covid = metadata[metadata['Covid'] == True]
@@ -132,7 +128,7 @@ labels = []
 
 for idx, (file, covid) in metadata.iterrows():
     label = 'covid' if covid else 'normal'
-    image = imread(path.join(args['input'], file))
+    image = imread(path.join(args['dataset'], "images", file))
     image = cvtColor(image, COLOR_BGR2RGB)
     image = resize(image, (224, 224))
 
