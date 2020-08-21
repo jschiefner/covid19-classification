@@ -47,10 +47,10 @@ for model in models:
         exit(1)
 
 # %% load images
-
+# evtl abfangen falls nicht bilddateien in diesem pfad liegen?
 data = []
 imageList = glob(path.join(args['dataset'], '*'))
-imageList = imageList[0:10] # TODO: remove this, just for development purposes
+imageList = imageList[0:1000] # TODO: remove this, just for development purposes
 for file in imageList:
     image = imread(file)
     image = cvtColor(image, COLOR_BGR2RGB)
@@ -87,9 +87,8 @@ for predictions, model in zip(predictionsList,models):
 if number_of_models>1:
     temp = np.zeros(len(fileNames))
     for predictions, model in zip(predictionsList,models):
-        temp += [np.argmax(prediction) for prediction in predictions]
-    temp/=number_of_models
-    outputDict.update({f'Covid [Ensemble Majority]': temp})
+        temp += [ (1 if np.argmax(prediction)==0 else 0) for prediction in predictions]
+    outputDict.update({f'Covid [Ensemble Majority]': ["True" if t*2>=number_of_models else "False" for t in temp]})
 
 for predictions, model in zip(predictionsList,models):
     outputDict.update({f'Covid (probability)[{model}]': predictions[:, 0]})
