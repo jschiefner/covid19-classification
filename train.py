@@ -4,19 +4,13 @@ from argparse import ArgumentParser
 from os import path, mkdir
 
 parser = ArgumentParser()
-parser.add_argument("-i","--input", required=True, help="path to folder containing the xray images")
-parser.add_argument("-d", "--dataset", required=True, help="input metadata.csv")
+parser.add_argument('dataset', help='file to input folder')
 parser.add_argument("-m","--model", default="VGG16", help="specify optional network")
 args = vars(parser.parse_args())
 
-# input check
-if not path.exists(args['input']):
-    print(f'[ERROR] the path "{args["input"]}" does not exist. Please supply a valid input folder.')
-    exit(1)
-
 # metadata check
 if not path.exists(args['dataset']):
-    print(f'[ERROR] the path "{args["dataset"]}" does not exist. Please supply a valid metadata file.')
+    print(f'[ERROR] the path "{args["dataset"]}" does not exist. Please supply a valid input folder.')
     exit(1)
 
 # model check
@@ -64,7 +58,7 @@ modelExists = path.exists(modelDataPath)
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout, GaussianNoise
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import LabelBinarizer
@@ -101,6 +95,7 @@ else:
     print(f'[INFO] baseModel: {baseModel}')
     # construct head of model that will be placed on top of the base model
     headModel = baseModel.output
+    # headModel = GaussianNoise(stddev=1.0)(headModel)
     headModel = AveragePooling2D(pool_size=(4, 4))(headModel)
     headModel = Flatten(name='flatten')(headModel)
     headModel = Dense(64, activation='relu')(headModel)
@@ -120,8 +115,8 @@ if trainEpochs <= 0:
 # %% prepare data
 print('[INFO] prepare data')
 
-metadata = pd.read_csv(args['dataset'], usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
-metadata = metadata[100:200] # for now only use 100 samples (5 positive, 95 negative)
+metadata = pd.read_csv(path.join(args['dataset'], "metadata.csv"), usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
+metadata = metadata[1000:1100] # for now only use 100 samples (10 positive, 90 negative)
 
 covid = metadata[metadata['Covid'] == True]
 healthy = metadata[metadata['Covid'] == False]
@@ -131,7 +126,7 @@ labels = []
 
 for idx, (file, covid) in metadata.iterrows():
     label = 'covid' if covid else 'normal'
-    image = imread(path.join(args['input'], file))
+    image = imread(path.join(args['dataset'], "images", file))
     image = cvtColor(image, COLOR_BGR2RGB)
     image = resize(image, (224, 224))
 
@@ -156,7 +151,12 @@ labels = to_categorical(labels)
 # %% train model
 
 # initialize the training data augmentation object
-trainAug = ImageDataGenerator(rotation_range=15, fill_mode='nearest') # adapt rotation range? wie schief ist so ein röntgen bild wohl maxial aufgenommen worden
+trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wie schief ist so ein röntgenbild wohl maxial aufgenommen worden
+                              horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5; 10 ist denke ich guter Mittelweg
+                              fill_mode='nearest',    # Testweise bessere performance als constant fill
+                              width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
+                              height_shift_range=0.2) # Vertikal tendenziell etwas schlechter
+                              #zoom_range=0.2)         # 1.0 +- zoom_range, kann also raus oder reinzoomen
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
