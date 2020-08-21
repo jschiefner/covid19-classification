@@ -70,7 +70,6 @@ for modelDataPath, model in zip(modelDataPaths,models):
     print(f'[INFO] successfully loaded "{modelPath}"')
 
     # %% make prediction
-
     predictionsList.append(model.predict(data))
 
 print(f'[INFO] predictions have been calculated')
@@ -85,7 +84,12 @@ for predictions, model in zip(predictionsList,models):
     outputDict.update({f'Covid [{model}]': [np.argmax(prediction) == 0 for prediction in predictions]})
 
 #ensemble stuff here
-outputDict.update({f'Covid [Ensemble Majority]': "soon TM"})
+if len(models)>1:
+    temp = np.zeros(len(fileNames))
+    for predictions, model in zip(predictionsList,models):
+        temp += [np.argmax(prediction) for prediction in predictions]
+    temp/=len(models)
+    outputDict.update({f'Covid [Ensemble Majority]': temp})
 
 for predictions, model in zip(predictionsList,models):
     outputDict.update({f'Covid (probability)[{model}]': predictions[:, 0]})
@@ -95,6 +99,9 @@ for predictions, model in zip(predictionsList,models):
 
 df = pd.DataFrame(outputDict)
 df.set_index('File')
-df.to_csv(f'{args["output"]}', index=False)
-
-print(f'[INFO] Predictions have been saved to {args["output"]}')
+try:
+    df.to_csv(f'{args["output"]}', index=False)
+    print(f'[INFO] Predictions have been saved to {args["output"]}')
+except PermissionError as e:
+    print(f'[ERROR] Error while saving file')
+    print(f'{e}')
