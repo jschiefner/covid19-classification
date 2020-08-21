@@ -13,7 +13,7 @@ from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
 parser = ArgumentParser()
 parser.add_argument('dataset', help='folder containing images to predict')
 parser.add_argument('output', help='filepath where output file should be stored')
-parser.add_argument('-m', '--model', required=False, default='VGG16', help='model to be used (VGG16 by default)')
+parser.add_argument('-m', '--model', required=False, default='VGG16', help='models to be used (VGG16 by default), possible to specify multiple: -m "VGG16 MobileNetV2"')
 args = vars(parser.parse_args())
 # args = {'dataset': 'images', 'output': 'output.csv', 'model': 'VGG16'} # for development
 
@@ -84,11 +84,11 @@ for predictions, model in zip(predictionsList,models):
     outputDict.update({f'Covid [{model}]': [np.argmax(prediction) == 0 for prediction in predictions]})
 
 #ensemble stuff here
-if len(models)>1:
+if number_of_models>1:
     temp = np.zeros(len(fileNames))
     for predictions, model in zip(predictionsList,models):
         temp += [np.argmax(prediction) for prediction in predictions]
-    temp/=len(models)
+    temp/=number_of_models
     outputDict.update({f'Covid [Ensemble Majority]': temp})
 
 for predictions, model in zip(predictionsList,models):
