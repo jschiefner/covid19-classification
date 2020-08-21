@@ -1,63 +1,27 @@
-# %% imports
-
-import tensorflow as tf
-from os import path
-from glob import glob
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import *
-from tensorflow.keras.layers import AveragePooling2D
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import Flatten
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Input
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.applications import VGG16
-from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.utils import to_categorical
-import pandas as pd
-import numpy as np
-from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.model_selection import train_test_split
-import argparse
-
-print('[INFO] set GPU configs')
-config = tf.compat.v1.ConfigProto()
-config.gpu_options.allow_growth = True
-session = tf.compat.v1.Session(config=config)
-
-# "parse" arguments (for now just specifying them like this
-args = {'model': 'VGG16'} # default model
-
-# initialize some training parameters
-INIT_LR = 1e-3
-EPOCHS = 25
-BS = 8
-
-# roadmap:
-# prepare images
-# split data in training/validation data
-
-# if exists selected model?
-    # load in model + according csv
-    # keep training until epoch 25
-    # finish when reaching epoch 25
-# if not exists selected model?
-    # create model
-    # train
-    # save model.h5 + model.csv
-
 # %% parse arguments
 
-parser = argparse.ArgumentParser()
+from argparse import ArgumentParser
+from os import path
+
+parser = ArgumentParser()
 parser.add_argument("-i","--input", required=True, help="path to folder containing the xray images")
 parser.add_argument("-d", "--dataset", required=True, help="input metadata.csv")
 parser.add_argument("-m","--model", default="VGG16", help="specify optional network")
 args = vars(parser.parse_args())
 
-availablemodels = [
+# input check
+if not path.exists(args['input']):
+    print(f'[ERROR] the path "{args["input"]}" does not exist. Please supply a valid input folder.')
+    exit(1)
+
+# metadata check
+if not path.exists(args['dataset']):
+    print(f'[ERROR] the path "{args["dataset"]}" does not exist. Please supply a valid metadata file.')
+    exit(1)
+
+# model check
+from tensorflow.keras.applications import *
+MODELS = [
     Xception,
     VGG16,
     VGG19,
@@ -85,18 +49,41 @@ availablemodels = [
     EfficientNetB6,
     EfficientNetB7,
 ]
-
-func_names = [m.__name__ for m in availablemodels]
-funcs_dict = dict(zip(func_names, availablemodels))
+func_names = [m.__name__ for m in MODELS]
+funcs_dict = dict(zip(func_names, MODELS))
 if not str(args['model']) in funcs_dict:
-    print(f'[INFO] Choose an appropriate model to continue, must be one out of: {func_names}')
+    print(f'[ERROR] Choose an appropriate model to continue, must be one out of: {func_names}.')
     exit(1)
 modelFunc = funcs_dict[str(args['model'])]
 
 modelDataPath = f'models/{args["model"]}.csv'
 modelExists = path.exists(modelDataPath)
 
+# %% import rest of dependencies
+
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.utils import to_categorical
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.model_selection import train_test_split
+from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
+from glob import glob
+import pandas as pd
+import numpy as np
+print('[INFO] set GPU configs')
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.compat.v1.Session(config=config)
+
 # %% load model
+
+# initialize some training parameters
+INIT_LR = 1e-3
+EPOCHS = 25
+BS = 8
 
 if modelExists:
     print(f'[INFO] Model exists!')
@@ -110,8 +97,7 @@ if modelExists:
     model = load_model(modelPaths[-1]) # load latest model
 else:
     print(f'[INFO] Model does not exist yet, creating a new one')
-    # baseModel = models[args['model']](weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
-    baseModel = VGG16(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
+    baseModel = modelFunc(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
     print(f'[INFO] baseModel: {baseModel}')
     # construct head of model that will be placed on top of the base model
     headModel = baseModel.output
@@ -127,7 +113,7 @@ else:
     trainEpochs = EPOCHS
     print(f'[INFO] trainEpochs: {trainEpochs}')
 
-if (trainEpochs < 0):
+if trainEpochs <= 0:
     print(f'[INFO] network is already trained on {EPOCHS} epochs, exiting')
     exit(0)
 
@@ -145,8 +131,8 @@ labels = []
 
 for idx, (file, covid) in metadata.iterrows():
     label = 'covid' if covid else 'normal'
-    image = imread(args['input']+f'{file}')
-    image = cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = imread(path.join(args['input'], file))
+    image = cvtColor(image, COLOR_BGR2RGB)
     image = resize(image, (224, 224))
 
     data.append(image)
