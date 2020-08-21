@@ -4,6 +4,13 @@ import tensorflow as tf
 from os import path
 from glob import glob
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import *
+from tensorflow.keras.layers import AveragePooling2D
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Input
+from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout
@@ -14,6 +21,7 @@ import numpy as np
 from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
+import argparse
 
 print('[INFO] set GPU configs')
 config = tf.compat.v1.ConfigProto()
@@ -41,19 +49,55 @@ BS = 8
     # train
     # save model.h5 + model.csv
 
+# %% parse arguments
 
-# %% load model
+parser = argparse.ArgumentParser()
+parser.add_argument("-i","--input", required=True, help="path to folder containing the xray images")
+parser.add_argument("-d", "--dataset", required=True, help="input metadata.csv")
+parser.add_argument("-m","--model", default="VGG16", help="specify optional network")
+args = vars(parser.parse_args())
 
-models = {
-    'VGG16': VGG16
-}
+availablemodels = [
+    Xception,
+    VGG16,
+    VGG19,
+    ResNet50,
+    ResNet101,
+    ResNet152,
+    ResNet50V2,
+    ResNet101V2,
+    ResNet152V2,
+    InceptionV3,
+    InceptionResNetV2,
+    MobileNet,
+    MobileNetV2,
+    DenseNet121,
+    DenseNet169,
+    DenseNet201,
+    NASNetMobile,
+    NASNetLarge,
+    EfficientNetB0,
+    EfficientNetB1,
+    EfficientNetB2,
+    EfficientNetB3,
+    EfficientNetB4,
+    EfficientNetB5,
+    EfficientNetB6,
+    EfficientNetB7,
+]
 
-if not args['model'] in models:
-    print(f'[INFO] Choose an appropriate model to continue, must be one out of: {models.keys()}')
+func_names = [m.__name__ for m in availablemodels]
+funcs_dict = dict(zip(func_names, availablemodels))
+if not str(args['model']) in funcs_dict:
+    print(f'[INFO] Choose an appropriate model to continue, must be one out of: {func_names}')
     exit(1)
+modelFunc = funcs_dict[str(args['model'])]
 
 modelDataPath = f'models/{args["model"]}.csv'
 modelExists = path.exists(modelDataPath)
+
+# %% load model
+
 if modelExists:
     print(f'[INFO] Model exists!')
     modelData = pd.read_csv(modelDataPath, index_col=0)
@@ -87,23 +131,22 @@ if (trainEpochs < 0):
     print(f'[INFO] network is already trained on {EPOCHS} epochs, exiting')
     exit(0)
 
-
 # %% prepare data
 print('[INFO] prepare data')
 
-metadata = pd.read_csv('metadata.csv', usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
+metadata = pd.read_csv(args['dataset'], usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
 metadata = metadata[100:200] # for now only use 100 samples (5 positive, 95 negative)
 
-covid_list = metadata[metadata['Covid'] == True]
-healthy_list = metadata[metadata['Covid'] == False]
+covid = metadata[metadata['Covid'] == True]
+healthy = metadata[metadata['Covid'] == False]
 
 data = []
 labels = []
 
 for idx, (file, covid) in metadata.iterrows():
     label = 'covid' if covid else 'normal'
-    image = imread(f'images/{file}')
-    image = cvtColor(image, COLOR_BGR2RGB)
+    image = imread(args['input']+f'{file}')
+    image = cvtColor(image, cv2.COLOR_BGR2RGB)
     image = resize(image, (224, 224))
 
     data.append(image)
@@ -120,12 +163,14 @@ labels = lb.fit_transform(labels)
 labels = to_categorical(labels)
 
 # datasplit
-(trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.2, stratify=labels, random_state=42)
+# random_stateint Controls the shuffling applied to the data before applying the split.
+# pass an int for reproducible output across multiple function calls. See Glossary.
+(trainX, testX, trainY, testY) = train_test_split(data, labels, test_size=0.2, stratify=labels ) # random_state=42
 
 # %% train model
 
 # initialize the training data augmentation object
-trainAug = ImageDataGenerator(rotation_range=15, fill_mode='nearest')
+trainAug = ImageDataGenerator(rotation_range=15, fill_mode='nearest') # adapt rotation range? wie schief ist so ein röntgen bild wohl maxial aufgenommen worden
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
