@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from os import path, mkdir
 
 parser = ArgumentParser()
-parser.add_argument("-d",'--dataset', default=".", help='file to input folder, leave empty if train.py is in right folder') # really helpful information yikes
+parser.add_argument("-d",'--dataset', default=".", help='path to input folder, defaults to current folder if no path given')
 parser.add_argument("-m","--model", default="VGG16", help="specify optional network")
 args = vars(parser.parse_args())
 
