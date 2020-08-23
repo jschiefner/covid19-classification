@@ -50,7 +50,7 @@ for model in models:
 # evtl abfangen falls nicht bilddateien in diesem pfad liegen?
 data = []
 imageList = glob(path.join(args['dataset'], '*'))
-imageList = imageList[0:1000] # TODO: remove this, just for development purposes
+imageList = imageList[0:100] # TODO: remove this, just for development purposes
 for file in imageList:
     image = imread(file)
     image = cvtColor(image, COLOR_BGR2RGB)
@@ -61,7 +61,7 @@ data = np.array(data) / 255.0
 
 # %% load models
 predictionsList = []
-for modelDataPath, model in zip(modelDataPaths,models):
+for modelDataPath, model in zip(modelDataPaths, models):
     modelData = pd.read_csv(modelDataPath, index_col=0)
     epochs = len(modelData)
     print(f'[INFO] model "{model}" was trained for {epochs} epochs')
@@ -80,15 +80,15 @@ outputDict = {
         'File': fileNames
     }
 
-for predictions, model in zip(predictionsList,models):
+for predictions, model in zip(predictionsList, models):
     outputDict.update({f'Covid [{model}]': [np.argmax(prediction) == 0 for prediction in predictions]})
 
-#ensemble stuff here
-if number_of_models>1:
+# ensemble stuff here
+if number_of_models > 1:
     temp = np.zeros(len(fileNames))
-    for predictions, model in zip(predictionsList,models):
-        temp += [ (1 if np.argmax(prediction)==0 else 0) for prediction in predictions]
-    outputDict.update({f'Covid [Ensemble Majority]': ["True" if t*2>=number_of_models else "False" for t in temp]})
+    for predictions, model in zip(predictionsList, models):
+        temp += [(1 if np.argmax(prediction) == 0 else 0) for prediction in predictions]
+    outputDict.update({f'Covid [Ensemble Majority]': ["True" if t*2 >= number_of_models else "False" for t in temp]})
 
 for predictions, model in zip(predictionsList,models):
     outputDict.update({f'Covid (probability)[{model}]': predictions[:, 0]})
@@ -100,7 +100,7 @@ df = pd.DataFrame(outputDict)
 df.set_index('File')
 try:
     df.to_csv(f'{args["output"]}', index=False)
-    print(f'[INFO] Predictions have been saved to {args["output"]}')
+    print(f'[INFO] Predictions have been saved to "{args["output"]}"')
 except PermissionError as e:
     print(f'[ERROR] Error while saving file')
     print(f'{e}')
