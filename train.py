@@ -80,7 +80,7 @@ session = tf.compat.v1.Session(config=config)
 
 # initialize some training parameters
 INIT_LR = 1e-3
-EPOCHS = 25 # TODO: adjust
+EPOCHS = 100 # TODO: adjust
 BS = 8
 
 if modelExists:
@@ -112,6 +112,7 @@ else:
         layer.trainable = False
     model = Model(inputs=baseModel.input, outputs=headModel)
     trainEpochs = EPOCHS
+    trainedEpochs = 0
     print(f'[INFO] trainEpochs: {trainEpochs}')
 
 if trainEpochs <= 0:
@@ -170,13 +171,13 @@ print(f'[INFO] selected {len(trainX)} images for training and {len(valX)} images
 # %% train model
 
 # initialize the training data augmentation object
-# trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wie schief ist so ein röntgenbild wohl maxial aufgenommen worden
-#                               horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5; 10 ist denke ich guter Mittelweg
-#                               fill_mode='nearest',    # Testweise bessere performance als constant fill
-#                               width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
-#                               height_shift_range=0.2) # Vertikal tendenziell etwas schlechter
-#                               #zoom_range=0.2)         # 1.0 +- zoom_range, kann also raus oder reinzoomen
-trainAug = ImageDataGenerator(rotation_range=15, fill_mode='nearest')
+trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wie schief ist so ein röntgenbild wohl maxial aufgenommen worden
+                              horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5; 10 ist denke ich guter Mittelweg
+                              fill_mode='nearest',    # Testweise bessere performance als constant fill
+                              width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
+                              height_shift_range=0.2) # Vertikal tendenziell etwas schlechter
+                              #zoom_range=0.2)         # 1.0 +- zoom_range, kann also raus oder reinzoomen
+# trainAug = ImageDataGenerator(rotation_range=15, fill_mode='nearest') # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
@@ -190,7 +191,7 @@ try:
         validation_steps=len(valX) // BS,
         epochs=trainEpochs,
         callbacks=[ModelCheckpoint(
-            filepath=f'models/checkpoints/{args["model"]}_' + 'epoch{epoch}_' +'ckpt-loss={loss:.2f}.h5',
+            filepath=f'models/checkpoints/{args["model"]}_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
             monitor='val_loss',
             save_weights_only=True,
             save_best_only=True,
@@ -214,7 +215,7 @@ print(classification_report(testLabels.argmax(axis=1), predictions, target_names
 cm = confusion_matrix(testLabels.argmax(axis=1), predictions)
 total = sum(sum(cm))
 acc = (cm[0, 0] + cm[1, 1]) / total
-sensitivity = cm[0, 0] / (cm[1, 0] + cm[1, 1])
+sensitivity = cm[0, 0] / (cm[0, 0] + cm[0, 1])
 specificity = cm[1, 1] / (cm[1, 0] + cm[1, 1])
 
 print(f'TP: {cm[0, 0]}, FN: {cm[0, 1]}')
