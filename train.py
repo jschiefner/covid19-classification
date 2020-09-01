@@ -53,9 +53,10 @@ if not str(args['model']) in funcs_dict:
 modelFunc = funcs_dict[str(args['model'])]
 
 modelDataPath = f'models/{args["model"]}.csv'
+modelLogPath = f'models/{args["model"]}.log'
 modelExists = path.exists(modelDataPath)
 
-# %% import rest of dependencies
+# %% import rest of dependencies and configure logging
 
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -69,12 +70,28 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
 from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
 from glob import glob
+import logging as log
+from sys import stdout
 import pandas as pd
 import numpy as np
-print('[INFO] set GPU configs')
+
+# set GPU configs, might have to comment out
+# these lines if you're working on a cpu
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 session = tf.compat.v1.Session(config=config)
+
+log.basicConfig(
+    level=log.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        log.FileHandler(modelLogPath),
+        log.StreamHandler(stdout)
+    ]
+)
+
+log.info('======================================================================')
+log.info(f'Starting Training with arguments: {args}')
 
 # %% load model
 
@@ -84,21 +101,21 @@ EPOCHS = 100 # TODO: adjust
 BS = 8
 
 if modelExists:
-    print(f'[INFO] Model exists!')
+    log.info('Model exists!')
     modelData = pd.read_csv(modelDataPath, index_col=0)
     trainedEpochs = len(modelData)
-    print(f'[INFO] trainedEpochs: {trainedEpochs}')
+    log.info(f'trainedEpochs: {trainedEpochs}')
     trainEpochs = EPOCHS - trainedEpochs
-    print(f'[INFO] trainEpochs: {trainEpochs}')
+    log.info(f'trainEpochs: {trainEpochs}')
     modelPaths = glob(f'models/{args["model"]}_*.h5')
-    print(f'[INFO] modelPaths: {modelPaths}')
+    log.info(f'modelPaths: {modelPaths}')
     latestModelPath = modelPaths[-1]
     model = load_model(latestModelPath) # load latest model
-    print(f'[INFO] successfully loaded "{latestModelPath}"')
+    log.info(f'successfully loaded "{latestModelPath}"')
 else:
-    print(f'[INFO] Model does not exist yet, creating a new one')
+    log.info('Model does not exist yet, creating a new one')
     baseModel = modelFunc(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
-    print(f'[INFO] baseModel: {baseModel}')
+    log.info(f'baseModel: {baseModel}')
     # construct head of model that will be placed on top of the base model
     headModel = baseModel.output
     # headModel = GaussianNoise(stddev=1.0)(headModel)
@@ -113,13 +130,13 @@ else:
     model = Model(inputs=baseModel.input, outputs=headModel)
     trainEpochs = EPOCHS
     trainedEpochs = 0
-    print(f'[INFO] trainEpochs: {trainEpochs}')
+    log.info(f'trainEpochs: {trainEpochs}')
 
 if trainEpochs <= 0:
-    print(f'[INFO] network is already trained on {EPOCHS} epochs, exiting')
+    log.info(f'network is already trained on {EPOCHS} epochs, exiting')
 
 # %% prepare data
-print('[INFO] prepare data')
+log.info('prepare data')
 
 metadata = pd.read_csv(path.join(args['dataset'], "metadata.csv"), usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
 # metadata = metadata[1000:1100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
@@ -142,9 +159,9 @@ for idx, (file, covid) in metadata.iterrows():
 data = np.array(data) / 255.0
 labels = np.array(labels)
 dataLength = len(data)
-print(f'[INFO] successfully loaded {dataLength} images')
+log.info(f'successfully loaded {dataLength} images')
 
-print('[INFO] encode labels')
+log.info('encode labels')
 
 # one hot encoding labels
 lb = LabelBinarizer()
@@ -152,7 +169,7 @@ labels = lb.fit_transform(labels)
 labels = to_categorical(labels)
 
 # datasplit
-print('[INFO] splitting data')
+log.info('splitting data')
 # use last 1/3rd of data for validation
 
 third = (dataLength // 3) * 2
@@ -161,12 +178,12 @@ trainValidationLabels = labels[:third]
 testData = data[third:]
 testLabels = labels[third:]
 
-print(f'[INFO] selected {len(testData)} images for validation after training')
+log.info(f'selected {len(testData)} images for validation after training')
 
 # random_stateint Controls the shuffling applied to the data before applying the split.
 # pass an int for reproducible output across multiple function calls. See Glossary.
 (trainX, valX, trainY, valY) = train_test_split(trainValidationData, trainValidationLabels, test_size=0.2, stratify=trainValidationLabels) # random_state=42
-print(f'[INFO] selected {len(trainX)} images for training and {len(valX)} images for validation (during training)')
+log.info(f'selected {len(trainX)} images for training and {len(valX)} images for validation (during training)')
 
 # %% train model
 
@@ -199,7 +216,7 @@ try:
         )]
     )
 except KeyboardInterrupt:
-    print(f'\n[INFO] interrupted Training at epoch: {len(model.history.epoch)}')
+    log.info(f'interrupted Training at epoch: {len(model.history.epoch)}')
 
 # save history and epochs for later
 # as history gets deleted when model.predict() is called
@@ -208,38 +225,40 @@ epochs = len(model.history.epoch)
 
 # %% validate model
 
-print('[INFO] Evaluating trained network')
 predictions = np.argmax(model.predict(testData, batch_size=BS), axis=1)
+report = classification_report(testLabels.argmax(axis=1), predictions, target_names=lb.classes_)
+log.info(f'Evaluating trained network\n{report}')
 
-print(classification_report(testLabels.argmax(axis=1), predictions, target_names=lb.classes_))
 cm = confusion_matrix(testLabels.argmax(axis=1), predictions)
 total = sum(sum(cm))
 acc = (cm[0, 0] + cm[1, 1]) / total
 sensitivity = cm[0, 0] / (cm[0, 0] + cm[0, 1])
 specificity = cm[1, 1] / (cm[1, 0] + cm[1, 1])
 
-print(f'TP: {cm[0, 0]}, FN: {cm[0, 1]}')
-print(f'FP: {cm[1, 0]}, TN: {cm[1, 1]}')
-print('acc: {:.4f}'.format(acc))
-print('sensitivity: {:.4f}'.format(sensitivity))
-print('specificity: {:.4f}'.format(specificity))
+log.info(f'TP: {cm[0, 0]}, FN: {cm[0, 1]}')
+log.info(f'FP: {cm[1, 0]}, TN: {cm[1, 1]}')
+log.info('acc: {:.4f}'.format(acc))
+log.info('sensitivity: {:.4f}'.format(sensitivity))
+log.info('specificity: {:.4f}'.format(specificity))
 
 # %% serialize model and csv
 
 if modelExists:
     epochs += trainedEpochs
-    print(f'[INFO] epoch: {epochs}')
+    log.info(f'epoch: {epochs}')
     historyFrame = pd.DataFrame(history)
     historyFrame.index = np.arange(len(modelData), len(modelData) + len(historyFrame))
     modelData = modelData.append(historyFrame)
 else:
-    print(f'[INFO] epoch: {epochs}')
+    log.info(f'epoch: {epochs}')
     modelData = pd.DataFrame(history)
 
 if not path.exists('models'):
     mkdir('models') # create models directory if it doesnt exist yet
 modelPath = f'models/{args["model"]}_{epochs}.h5'
 csvPath = f'models/{args["model"]}.csv'
-print(f'[INFO] saving model to: {modelPath}, saving csv to: {csvPath}')
+log.info(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
 model.save(modelPath, save_format='h5')
 modelData.to_csv(csvPath)
+log.info('======================================================================\n\n')
+
