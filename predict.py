@@ -1,12 +1,21 @@
 # %% imports
 
-from os import path
+from os import path, environ
+environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 from argparse import ArgumentParser
 from glob import glob
 from tensorflow.keras.models import load_model
 import pandas as pd
 import numpy as np
 from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
+import logging as log
+from sys import stdout
+
+log.basicConfig(
+    level=log.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[log.StreamHandler(stdout)]
+)
 
 # %% parse arguments
 
@@ -19,10 +28,8 @@ args = vars(parser.parse_args())
 
 # verify dataset path
 if not path.exists(args['dataset']):
-    print(
-        f'[ERROR] the dataset path "{args["dataset"]}" is not valid.',
-        'Please supply the path to dataset folder',
-    )
+    log.error(f'the dataset path "{args["dataset"]}" is not valid.')
+    log.error('Please supply the path to dataset folder')
     exit(1)
 
 # verify/correct output path
@@ -40,10 +47,8 @@ modelDataPaths = []
 for model in models:
     modelDataPaths.append(f'models/{model}.csv')
     if not path.exists(modelDataPaths[-1]):
-        print(
-            f'[ERROR] the model "{model}" has not been trained yet.',
-            'Please train the model first before predicting with it.',
-        )
+        log.error(f'the model "{model}" has not been trained yet.')
+        log.error('Please train the model first before predicting with it.')
         exit(1)
 
 # %% load images
@@ -56,7 +61,7 @@ for file in imageList:
     image = cvtColor(image, COLOR_BGR2RGB)
     image = resize(image, (224, 224))
     data.append(image)
-print(f'[INFO] successfully loaded {len(data)} images from "{args["dataset"]}" directory.')
+log.info(f'successfully loaded {len(data)} images from "{args["dataset"]}" directory.')
 data = np.array(data) / 255.0
 
 # %% load models
@@ -64,15 +69,14 @@ predictionsList = []
 for modelDataPath, model in zip(modelDataPaths, models):
     modelData = pd.read_csv(modelDataPath, index_col=0)
     epochs = len(modelData)
-    print(f'[INFO] model "{model}" was trained for {epochs} epochs')
+    log.info(f'model "{model}" was trained for {epochs} epochs')
     modelPath = f'models/{model}_{epochs}.h5'
     model = load_model(modelPath)
-    print(f'[INFO] successfully loaded "{modelPath}"')
+    log.info(f'successfully loaded "{modelPath}"')
 
-    # %% make prediction
     predictionsList.append(model.predict(data))
 
-print(f'[INFO] predictions have been calculated')
+log.info('predictions have been calculated')
 
 # save prediction to output file
 fileNames = [path.basename(file) for file in imageList]
@@ -90,17 +94,17 @@ if number_of_models > 1:
         temp += [(1 if np.argmax(prediction) == 0 else 0) for prediction in predictions]
     outputDict.update({f'Covid [Ensemble Majority]': ["True" if t*2 >= number_of_models else "False" for t in temp]})
 
-for predictions, model in zip(predictionsList,models):
+for predictions, model in zip(predictionsList, models):
     outputDict.update({f'Covid (probability)[{model}]': predictions[:, 0]})
 
-for predictions, model in zip(predictionsList,models):
+for predictions, model in zip(predictionsList, models):
     outputDict.update({f'No Finding (probability)[{model}]': predictions[:, 1]})
 
 df = pd.DataFrame(outputDict)
 df.set_index('File')
 try:
     df.to_csv(f'{args["output"]}', index=False)
-    print(f'[INFO] Predictions have been saved to "{args["output"]}"')
+    log.info(f'Predictions have been saved to "{args["output"]}"')
 except PermissionError as e:
-    print(f'[ERROR] Error while saving file')
-    print(f'{e}')
+    log.error('Error while saving file')
+    log.error(f'{e}')
