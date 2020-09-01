@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from os import path, mkdir, environ
-environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
@@ -229,7 +229,9 @@ print('specificity: {:.4f}'.format(specificity))
 if modelExists:
     epochs += trainedEpochs
     print(f'[INFO] epoch: {epochs}')
-    modelData = modelData.append(pd.DataFrame(history))
+    historyFrame = pd.DataFrame(history)
+    historyFrame.index = np.arange(len(modelData), len(modelData) + len(historyFrame))
+    modelData = modelData.append(historyFrame)
 else:
     print(f'[INFO] epoch: {epochs}')
     modelData = pd.DataFrame(history)
