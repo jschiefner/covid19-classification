@@ -8,7 +8,7 @@ parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help="specify optional network")
 args = vars(parser.parse_args())
-# args = {'dataset': '.', 'model': 'VGG16'}
+# args = {'dataset': '.', 'model': 'VGG16'} # TODO: comment out
 
 # metadata check
 if not path.exists(args['dataset']):
@@ -88,6 +88,7 @@ from sys import stdout
 import pandas as pd
 import numpy as np
 from utils.save_callback import SaveCallback
+from utils.evaluation import evaluate_confusion_matrix, log_confusion_matrix
 
 # set GPU configs, might have to comment out
 # these lines if you're working on a cpu
@@ -118,9 +119,8 @@ if modelExists:
     log.info('Model exists!')
     modelData = pd.read_csv(modelDataPath, index_col=0)
     trainedEpochs = len(modelData)
-    log.info(f'trainedEpochs: {trainedEpochs}')
     trainEpochs = EPOCHS - trainedEpochs
-    log.info(f'trainEpochs: {trainEpochs}')
+    log.info(f'trained epochs: {trainedEpochs}, train epochs: {trainEpochs}, (total: {trainEpochs + trainedEpochs})')
     modelPaths = glob(f'models/{args["model"]}/epoch_*.h5')
     log.info(f'modelPaths: {modelPaths}')
     latestModelPath = modelPaths[-1]
@@ -212,6 +212,9 @@ trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wi
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
+# initialize a dataframe to be used to store evaluation results in
+resultFrame = pd.DataFrame(columns=['TP', 'FN', 'FP', 'TN'])
+
 # train network head, H not needed for now
 # holds useful information about training progress
 try:
@@ -230,6 +233,7 @@ try:
         ), SaveCallback(
             test_data=testData,
             test_labels=testLabels,
+            result_frame=resultFrame,
             batch_size=BS,
             model_name=args['model'],
             trained_epochs=trainedEpochs,
@@ -246,20 +250,13 @@ epochs = len(model.history.epoch)
 # %% validate model
 
 predictions = np.argmax(model.predict(testData, batch_size=BS), axis=1)
-report = classification_report(testLabels.argmax(axis=1), predictions, target_names=lb.classes_)
+report = classification_report(testLabels.argmax(axis=1), predictions, target_names=lb.classes_) # TODO: do we even need this?
 log.info(f'Evaluating trained network\n{report}')
 
 cm = confusion_matrix(testLabels.argmax(axis=1), predictions)
-total = sum(sum(cm))
-acc = (cm[0, 0] + cm[1, 1]) / total
-sensitivity = cm[0, 0] / (cm[0, 0] + cm[0, 1])
-specificity = cm[1, 1] / (cm[1, 0] + cm[1, 1])
-
-log.info(f'TP: {cm[0, 0]}, FN: {cm[0, 1]}')
-log.info(f'FP: {cm[1, 0]}, TN: {cm[1, 1]}')
-log.info('acc: {:.4f}'.format(acc))
-log.info('sensitivity: {:.4f}'.format(sensitivity))
-log.info('specificity: {:.4f}'.format(specificity))
+evaluation = evaluate_confusion_matrix(cm)
+log_confusion_matrix(cm)
+for metric in evaluation: log.info(metric + ': {:.4f}'.format(evaluation[metric]))
 
 # %% serialize model and csv
 
@@ -267,11 +264,11 @@ if modelExists:
     epochs += trainedEpochs
     log.info(f'epoch: {epochs}')
     historyFrame = pd.DataFrame(history)
-    historyFrame.index = np.arange(len(modelData), len(modelData) + len(historyFrame))
-    modelData = modelData.append(historyFrame)
+    modelData = modelData.append(historyFrame.join(resultFrame))
+    modelData.index = np.arange(0, len(modelData))
 else:
     log.info(f'epoch: {epochs}')
-    modelData = pd.DataFrame(history)
+    modelData = pd.DataFrame(history).join(resultFrame)
 
 modelPath = path.join('models', args['model'], f'epoch_{epochs}.h5')
 csvPath = path.join('models', args['model'], 'data.csv')
@@ -279,4 +276,3 @@ log.info(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
 model.save(modelPath, save_format='h5')
 modelData.to_csv(csvPath)
 log.info('======================================================================\n\n')
-
