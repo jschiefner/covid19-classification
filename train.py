@@ -74,6 +74,7 @@ import logging as log
 from sys import stdout
 import pandas as pd
 import numpy as np
+from utils.save_callback import SaveCallback
 
 # set GPU configs, might have to comment out
 # these lines if you're working on a cpu
@@ -213,6 +214,11 @@ try:
             save_weights_only=True,
             save_best_only=True,
             period=3,
+        ), SaveCallback(
+            test_data=testData,
+            test_labels=testLabels,
+            batch_size=BS,
+            trained_epochs=trainedEpochs,
         )]
     )
 except KeyboardInterrupt:
