@@ -52,9 +52,22 @@ if not str(args['model']) in funcs_dict:
     exit(1)
 modelFunc = funcs_dict[str(args['model'])]
 
-modelDataPath = f'models/{args["model"]}.csv'
-modelLogPath = f'models/{args["model"]}.log'
-modelExists = path.exists(modelDataPath)
+if not path.isdir('models'):
+    mkdir('models') # create models directory if it doesnt exist yet
+modelFolderPath = path.join('models', args['model'])
+print(f'modelFolderPath: {modelFolderPath}')
+modelDataPath = path.join(modelFolderPath, 'data.csv')
+print(f'modelDataPath: {modelDataPath}')
+modelLogPath = path.join(modelFolderPath, 'training.log')
+print(f'modelLogPath: {modelLogPath}')
+modelCheckpointsPath = path.join(modelFolderPath, 'checkpoints')
+print(f'modelCheckpointsPath: {modelCheckpointsPath}')
+if not path.isdir(modelFolderPath):
+    modelExists = False
+    mkdir(modelFolderPath) # create model specific directory
+    mkdir(modelCheckpointsPath)
+else:
+    modelExists = path.exists(modelDataPath)
 
 # %% import rest of dependencies and configure logging
 
@@ -108,7 +121,7 @@ if modelExists:
     log.info(f'trainedEpochs: {trainedEpochs}')
     trainEpochs = EPOCHS - trainedEpochs
     log.info(f'trainEpochs: {trainEpochs}')
-    modelPaths = glob(f'models/{args["model"]}_*.h5')
+    modelPaths = glob(f'models/{args["model"]}/epoch_*.h5')
     log.info(f'modelPaths: {modelPaths}')
     latestModelPath = modelPaths[-1]
     model = load_model(latestModelPath) # load latest model
@@ -209,7 +222,7 @@ try:
         validation_steps=len(valX) // BS,
         epochs=trainEpochs,
         callbacks=[ModelCheckpoint(
-            filepath=f'models/checkpoints/{args["model"]}_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
+            filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
             monitor='val_loss',
             save_weights_only=True,
             save_best_only=True,
@@ -218,6 +231,7 @@ try:
             test_data=testData,
             test_labels=testLabels,
             batch_size=BS,
+            model_name=args['model'],
             trained_epochs=trainedEpochs,
         )]
     )
@@ -259,10 +273,8 @@ else:
     log.info(f'epoch: {epochs}')
     modelData = pd.DataFrame(history)
 
-if not path.exists('models'):
-    mkdir('models') # create models directory if it doesnt exist yet
-modelPath = f'models/{args["model"]}_{epochs}.h5'
-csvPath = f'models/{args["model"]}.csv'
+modelPath = path.join('models', args['model'], f'epoch_{epochs}.h5')
+csvPath = path.join('models', args['model'], 'data.csv')
 log.info(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
 model.save(modelPath, save_format='h5')
 modelData.to_csv(csvPath)

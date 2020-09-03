@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 parser = ArgumentParser()
 parser.add_argument('-m', '--model', required=True, help='Model Name')
 args = vars(parser.parse_args())
-modelDataPath = f'models/{args["model"]}.csv'
+modelDataPath = path.join('models', args['model'], 'data.csv')
 
 if not path.exists(modelDataPath):
     print(

@@ -27,7 +27,7 @@ args = vars(parser.parse_args())
 # args = {'dataset': 'images', 'output': 'output.csv', 'model': 'VGG16'} # for development
 
 # verify dataset path
-if not path.exists(args['dataset']):
+if not path.isdir(args['dataset']):
     log.error(f'the dataset path "{args["dataset"]}" is not valid.')
     log.error('Please supply the path to dataset folder')
     exit(1)
@@ -38,14 +38,13 @@ if len(ext) == 0:
     args['output'] = f'{outpath}.csv'
 
 # check if multiple models given, its ensemble classification then
-
 models = args['model'].split(" ")
 number_of_models = len(models)
 
 # verify model paths
 modelDataPaths = []
 for model in models:
-    modelDataPaths.append(f'models/{model}.csv')
+    modelDataPaths.append(path.join('models', model, 'data.csv'))
     if not path.exists(modelDataPaths[-1]):
         log.error(f'the model "{model}" has not been trained yet.')
         log.error('Please train the model first before predicting with it.')
@@ -70,19 +69,16 @@ for modelDataPath, model in zip(modelDataPaths, models):
     modelData = pd.read_csv(modelDataPath, index_col=0)
     epochs = len(modelData)
     log.info(f'model "{model}" was trained for {epochs} epochs')
-    modelPath = f'models/{model}_{epochs}.h5'
+    modelPath = path.join('models', model, f'epoch_{epochs}.h5')
     model = load_model(modelPath)
     log.info(f'successfully loaded "{modelPath}"')
-
     predictionsList.append(model.predict(data))
 
 log.info('predictions have been calculated')
 
 # save prediction to output file
 fileNames = [path.basename(file) for file in imageList]
-outputDict = {
-        'File': fileNames
-    }
+outputDict = {'File': fileNames}
 
 for predictions, model in zip(predictionsList, models):
     outputDict.update({f'Covid [{model}]': [np.argmax(prediction) == 0 for prediction in predictions]})
