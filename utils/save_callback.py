@@ -26,7 +26,7 @@ class SaveCallback(Callback):
         modelPath = path.join('models', self._modelName, f'intermediate_{self._epoch}.h5')
         self.model.save(modelPath, save_format='h5')
         model = load_model(modelPath)
-        # remove(modelPath) # TODO: decide whether to keep/remove model
+        remove(modelPath) # TODO: decide whether to keep/remove model
         predictions = np.argmax(model.predict(self._testData, batch_size=self._BS), axis=1)
 
         cm = confusion_matrix(self._testLabels.argmax(axis=1), predictions)

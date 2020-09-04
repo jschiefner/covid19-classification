@@ -112,7 +112,7 @@ log.info(f'Starting Training with arguments: {args}')
 
 # initialize some training parameters
 INIT_LR = 1e-3
-EPOCHS = 100 # TODO: adjust
+EPOCHS = 100 # TODO: adjust (make optional argument)
 BS = 8
 
 if modelExists:
@@ -148,6 +148,7 @@ else:
 
 if trainEpochs <= 0:
     log.info(f'network is already trained on {EPOCHS} epochs, exiting')
+    exit(0)
 
 # %% prepare data
 log.info('prepare data')
@@ -202,13 +203,13 @@ log.info(f'selected {len(trainX)} images for training and {len(valX)} images for
 # %% train model
 
 # initialize the training data augmentation object
-trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wie schief ist so ein röntgenbild wohl maxial aufgenommen worden
-                              horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5; 10 ist denke ich guter Mittelweg
-                              fill_mode='nearest',    # Testweise bessere performance als constant fill
-                              width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
-                              height_shift_range=0.2) # Vertikal tendenziell etwas schlechter
-                              #zoom_range=0.2)         # 1.0 +- zoom_range, kann also raus oder reinzoomen
-# trainAug = ImageDataGenerator(rotation_range=15, fill_mode='nearest') # TODO: enable for benchmark training
+# trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wie schief ist so ein röntgenbild wohl maxial aufgenommen worden
+#                               horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5; 10 ist denke ich guter Mittelweg
+#                               fill_mode='nearest',    # Testweise bessere performance als constant fill
+#                               width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
+#                               height_shift_range=0.2) # Vertikal tendenziell etwas schlechter
+#                               #zoom_range=0.2)         # 1.0 +- zoom_range, kann also raus oder reinzoomen
+trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
@@ -230,7 +231,7 @@ try:
             save_weights_only=True,
             save_best_only=True,
             period=3,
-        ), SaveCallback(
+        ), SaveCallback( # TODO: specify how often inbetween model should be saved!
             test_data=testData,
             test_labels=testLabels,
             result_frame=resultFrame,

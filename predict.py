@@ -10,6 +10,13 @@ import numpy as np
 from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
 import logging as log
 from sys import stdout
+import tensorflow as tf
+
+# set GPU configs, might have to comment out
+# these lines if you're working on a cpu
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.compat.v1.Session(config=config)
 
 log.basicConfig(
     level=log.INFO,
