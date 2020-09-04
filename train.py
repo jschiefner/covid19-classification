@@ -7,6 +7,7 @@ environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help="specify optional network")
+parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'model': 'VGG16'} # TODO: comment out
 
@@ -55,13 +56,9 @@ modelFunc = funcs_dict[str(args['model'])]
 if not path.isdir('models'):
     mkdir('models') # create models directory if it doesnt exist yet
 modelFolderPath = path.join('models', args['model'])
-print(f'modelFolderPath: {modelFolderPath}')
 modelDataPath = path.join(modelFolderPath, 'data.csv')
-print(f'modelDataPath: {modelDataPath}')
 modelLogPath = path.join(modelFolderPath, 'training.log')
-print(f'modelLogPath: {modelLogPath}')
 modelCheckpointsPath = path.join(modelFolderPath, 'checkpoints')
-print(f'modelCheckpointsPath: {modelCheckpointsPath}')
 if not path.isdir(modelFolderPath):
     modelExists = False
     mkdir(modelFolderPath) # create model specific directory
@@ -112,14 +109,13 @@ log.info(f'Starting Training with arguments: {args}')
 
 # initialize some training parameters
 INIT_LR = 1e-3
-EPOCHS = 100 # TODO: adjust (make optional argument)
 BS = 8
 
 if modelExists:
     log.info('Model exists!')
     modelData = pd.read_csv(modelDataPath, index_col=0)
     trainedEpochs = len(modelData)
-    trainEpochs = EPOCHS - trainedEpochs
+    trainEpochs = args['epochs'] - trainedEpochs
     log.info(f'trained epochs: {trainedEpochs}, train epochs: {trainEpochs}, (total: {trainEpochs + trainedEpochs})')
     modelPaths = glob(f'models/{args["model"]}/epoch_*.h5')
     log.info(f'modelPaths: {modelPaths}')
@@ -142,12 +138,13 @@ else:
     for layer in baseModel.layers:
         layer.trainable = False
     model = Model(inputs=baseModel.input, outputs=headModel)
-    trainEpochs = EPOCHS
+    trainEpochs = args['epochs']
     trainedEpochs = 0
     log.info(f'trainEpochs: {trainEpochs}')
 
 if trainEpochs <= 0:
-    log.info(f'network is already trained on {EPOCHS} epochs, exiting')
+    log.info(f'network is already trained on {args["epochs"]} epochs, exiting')
+    log.info('if you want to train the network for longer, set the optional --epochs argument')
     exit(0)
 
 # %% prepare data
