@@ -9,7 +9,7 @@ parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help="specify optional network")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
 args = vars(parser.parse_args())
-# args = {'dataset': '.', 'model': 'VGG16'} # TODO: comment out
+# args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
 
 # metadata check
 if not path.exists(args['dataset']):
@@ -84,8 +84,8 @@ import logging as log
 from sys import stdout
 import pandas as pd
 import numpy as np
-from utils.save_callback import SaveCallback
-from utils.evaluation import evaluate_confusion_matrix, log_confusion_matrix
+from utils.evaluation_callback import EvaluationCallback
+# from utils.evaluation import evaluate_confusion_matrix, log_confusion_matrix
 
 # set GPU configs, might have to comment out
 # these lines if you're working on a cpu
@@ -133,7 +133,7 @@ else:
     headModel = Flatten(name='flatten')(headModel)
     headModel = Dense(64, activation='relu')(headModel)
     headModel = Dropout(0.5)(headModel)
-    headModel = Dense(2, activation='softmax')(headModel)
+    headModel = Dense(3, activation='softmax')(headModel)
 
     for layer in baseModel.layers:
         layer.trainable = False
@@ -150,17 +150,16 @@ if trainEpochs <= 0:
 # %% prepare data
 log.info('prepare data')
 
-metadata = pd.read_csv(path.join(args['dataset'], "metadata.csv"), usecols=['File', 'Covid'], dtype={'File': np.str, 'Covid': np.bool})
+metadata = pd.read_csv(path.join(args['dataset'], "metadata.csv"), usecols=['File', 'Covid', 'No Finding'], dtype={'File': np.str, 'Covid': np.bool, 'No Finding': np.bool})
 # metadata = metadata[1000:1100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
-
-covid = metadata[metadata['Covid'] == True]
-healthy = metadata[metadata['Covid'] == False]
 
 data = []
 labels = []
 
-for idx, (file, covid) in metadata.iterrows():
-    label = 'covid' if covid else 'normal'
+for _idx, (file, covid, noFinding) in metadata.iterrows():
+    if covid: label = 'covid'
+    elif noFinding: label = 'healthy'
+    else: label = 'other'
     image = imread(path.join(args['dataset'], "images", file))
     image = cvtColor(image, COLOR_BGR2RGB)
     image = resize(image, (224, 224))
@@ -175,10 +174,11 @@ log.info(f'successfully loaded {dataLength} images')
 
 log.info('encode labels')
 
+
 # one hot encoding labels
 lb = LabelBinarizer()
 labels = lb.fit_transform(labels)
-labels = to_categorical(labels)
+# labels = to_categorical(labels) # TODO: is this really not necessary?
 
 # datasplit
 log.info('splitting data')
@@ -210,9 +210,6 @@ trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
-# initialize a dataframe to be used to store evaluation results in
-resultFrame = pd.DataFrame(columns=['TP', 'FN', 'FP', 'TN'])
-
 # train network head, H not needed for now
 # holds useful information about training progress
 try:
@@ -228,10 +225,9 @@ try:
             save_weights_only=True,
             save_best_only=True,
             period=3,
-        ), SaveCallback( # TODO: specify how often inbetween model should be saved!
+        ), EvaluationCallback( # TODO: specify how often inbetween model should be saved!
             test_data=testData,
             test_labels=testLabels,
-            result_frame=resultFrame,
             batch_size=BS,
             model_name=args['model'],
             trained_epochs=trainedEpochs,
@@ -252,21 +248,20 @@ report = classification_report(testLabels.argmax(axis=1), predictions, target_na
 log.info(f'Evaluating trained network\n{report}')
 
 cm = confusion_matrix(testLabels.argmax(axis=1), predictions)
-evaluation = evaluate_confusion_matrix(cm)
-log_confusion_matrix(cm)
-for metric in evaluation: log.info(metric + ': {:.4f}'.format(evaluation[metric]))
+# evaluation = evaluate_confusion_matrix(cm)
+# log_confusion_matrix(cm)
+# for metric in evaluation: log.info(metric + ': {:.4f}'.format(evaluation[metric]))
 
 # %% serialize model and csv
 
 if modelExists:
     epochs += trainedEpochs
     log.info(f'epoch: {epochs}')
-    historyFrame = pd.DataFrame(history)
-    modelData = modelData.append(historyFrame.join(resultFrame))
+    modelData = modelData.append(pd.DataFrame(history))
     modelData.index = np.arange(0, len(modelData))
 else:
     log.info(f'epoch: {epochs}')
-    modelData = pd.DataFrame(history).join(resultFrame)
+    modelData = pd.DataFrame(history)
 
 modelPath = path.join('models', args['model'], f'epoch_{epochs}.h5')
 csvPath = path.join('models', args['model'], 'data.csv')
