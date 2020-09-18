@@ -4,14 +4,12 @@ import numpy as np
 import logging as log
 from sklearn.metrics import confusion_matrix
 from os import path, remove
-from utils.evaluation import evaluate_confusion_matrix, log_confusion_matrix
 
-class SaveCallback(Callback):
-    def __init__(self, test_data, test_labels, result_frame, batch_size, model_name, trained_epochs):
+class EvaluationCallback(Callback):
+    def __init__(self, test_data, test_labels, batch_size, model_name, trained_epochs):
         super().__init__()
         self._testData = test_data
         self._testLabels = test_labels
-        self._resultFrame = result_frame
         self._BS = batch_size
         self._modelName = model_name
         self._epoch = trained_epochs
@@ -30,12 +28,4 @@ class SaveCallback(Callback):
         predictions = np.argmax(model.predict(self._testData, batch_size=self._BS), axis=1)
 
         cm = confusion_matrix(self._testLabels.argmax(axis=1), predictions)
-        evaluation = evaluate_confusion_matrix(cm)
-        log_confusion_matrix(cm)
-        for metric in evaluation: log.info(metric + ': {:.4f}'.format(evaluation[metric]))
-
-        # updates same reference as passed in on initialization
-        self._resultFrame.loc[len(self._resultFrame)] = {
-            'TP': cm[0, 0], 'FN': cm[0, 1],
-            'FP': cm[1, 0], 'TN': cm[1, 1],
-        }
+        log.info(f'confusion matrix:\n{cm}')
