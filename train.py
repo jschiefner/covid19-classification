@@ -174,10 +174,9 @@ log.info(f'successfully loaded {dataLength} images')
 
 log.info('encode labels')
 
-
 # one hot encoding labels
-lb = LabelBinarizer()
-labels = lb.fit_transform(labels)
+lb = LabelBinarizer().fit(['covid', 'healthy', 'other'])
+labels = lb.transform(labels)
 # labels = to_categorical(labels) # TODO: is this really not necessary?
 
 # datasplit

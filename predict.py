@@ -31,7 +31,7 @@ parser.add_argument('dataset', help='folder containing images to predict')
 parser.add_argument('output', help='filepath where output file should be stored')
 parser.add_argument('-m', '--model', required=False, default='VGG16', help='models to be used (VGG16 by default), possible to specify multiple: -m "VGG16 MobileNetV2"')
 args = vars(parser.parse_args())
-# args = {'dataset': 'images', 'output': 'output.csv', 'model': 'VGG16'} # for development
+# args = {'dataset': 'images', 'output': 'output.csv', 'model': 'VGG16 ResNet50'} # for development
 
 # verify dataset path
 if not path.isdir(args['dataset']):
@@ -61,7 +61,7 @@ for model in models:
 # evtl abfangen falls nicht bilddateien in diesem pfad liegen?
 data = []
 imageList = glob(path.join(args['dataset'], '*'))
-imageList = imageList[0:100] # TODO: remove this, just for development purposes
+imageList = imageList[0:3] # TODO: remove this, just for development purposes
 for file in imageList:
     image = imread(file)
     image = cvtColor(image, COLOR_BGR2RGB)
@@ -88,20 +88,19 @@ fileNames = [path.basename(file) for file in imageList]
 outputDict = {'File': fileNames}
 
 for predictions, model in zip(predictionsList, models):
-    outputDict.update({f'Covid [{model}]': [np.argmax(prediction) == 0 for prediction in predictions]})
+    outputDict[f'Covid [{model}]'] = [np.argmax(prediction) == 0 for prediction in predictions]
 
 # ensemble stuff here
 if number_of_models > 1:
     temp = np.zeros(len(fileNames))
     for predictions, model in zip(predictionsList, models):
-        temp += [(1 if np.argmax(prediction) == 0 else 0) for prediction in predictions]
-    outputDict.update({f'Covid [Ensemble Majority]': ["True" if t*2 >= number_of_models else "False" for t in temp]})
+        temp += [(1 if np.argmax(prediction) == 0 else 0) for prediction in predictions] # 100% covid == [1,0,0]
+    outputDict['Covid [Ensemble Majority]'] = [t*2 >= number_of_models for t in temp]
 
 for predictions, model in zip(predictionsList, models):
-    outputDict.update({f'Covid (probability)[{model}]': predictions[:, 0]})
-
-for predictions, model in zip(predictionsList, models):
-    outputDict.update({f'No Finding (probability)[{model}]': predictions[:, 1]})
+    outputDict[f'Covid (probability)[{model}]'] = predictions[:, 0]
+    outputDict[f'Healthy (probability)[{model}]'] = predictions[:, 1]
+    outputDict[f'Other (probability)[{model}]'] = predictions[:, 2]
 
 df = pd.DataFrame(outputDict)
 df.set_index('File')
@@ -109,5 +108,5 @@ try:
     df.to_csv(f'{args["output"]}', index=False)
     log.info(f'Predictions have been saved to "{args["output"]}"')
 except PermissionError as e:
-    log.error('Error while saving file')
+    log.error('Permission Error while saving file')
     log.error(f'{e}')
