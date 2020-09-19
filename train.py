@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 from os import path, mkdir, environ
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
+from utils.management import *
 
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
@@ -12,9 +13,7 @@ args = vars(parser.parse_args())
 # args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
 
 # metadata check
-if not path.exists(args['dataset']):
-    print(f'[ERROR] the path "{args["dataset"]}" does not exist. Please supply a valid input folder.')
-    exit(1)
+check_if_exists_or_exit(args['dataset'])
 
 # model check
 from tensorflow.keras.applications import *
@@ -53,16 +52,14 @@ if not str(args['model']) in funcs_dict:
     exit(1)
 modelFunc = funcs_dict[str(args['model'])]
 
-if not path.isdir('models'):
-    mkdir('models') # create models directory if it doesnt exist yet
+check_and_create_folder('models')
 modelFolderPath = path.join('models', args['model'])
 modelDataPath = path.join(modelFolderPath, 'data.csv')
 modelLogPath = path.join(modelFolderPath, 'training.log')
 modelCheckpointsPath = path.join(modelFolderPath, 'checkpoints')
-if not path.isdir(modelFolderPath):
+if not check_and_create_folder(modelFolderPath):
     modelExists = False
-    mkdir(modelFolderPath) # create model specific directory
-    mkdir(modelCheckpointsPath)
+    check_and_create_folder(modelCheckpointsPath)
 else:
     modelExists = path.exists(modelDataPath)
 
@@ -85,9 +82,9 @@ from sys import stdout
 import pandas as pd
 import numpy as np
 from utils.evaluation_callback import EvaluationCallback
-from utils.constants import CLASSES
+from utils.constants import *
 # from utils.evaluation import evaluate_confusion_matrix, log_confusion_matrix
-from utils.data import load_dataset
+from utils.data import *
 
 # set GPU configs, might have to comment out
 # these lines if you're working on a cpu
@@ -104,7 +101,7 @@ log.basicConfig(
     ]
 )
 
-log.info('======================================================================')
+printSeparator()
 log.info(f'Starting Training with arguments: {args}')
 
 # %% load model
@@ -114,16 +111,7 @@ INIT_LR = 1e-3
 BS = 8
 
 if modelExists:
-    log.info('Model exists!')
-    modelData = pd.read_csv(modelDataPath, index_col=0)
-    trainedEpochs = len(modelData)
-    trainEpochs = args['epochs'] - trainedEpochs
-    log.info(f'trained epochs: {trainedEpochs}, train epochs: {trainEpochs}, (total: {trainEpochs + trainedEpochs})')
-    modelPaths = glob(f'models/{args["model"]}/epoch_*.h5')
-    log.info(f'modelPaths: {modelPaths}')
-    latestModelPath = modelPaths[-1]
-    model = load_model(latestModelPath) # load latest model
-    log.info(f'successfully loaded "{latestModelPath}"')
+    model, modelData, trainEpochs, trainedEpochs = load_existing_model(args['model'], modelDataPath, args['epochs'])
 else:
     log.info('Model does not exist yet, creating a new one')
     baseModel = modelFunc(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
@@ -144,10 +132,7 @@ else:
     trainedEpochs = 0
     log.info(f'trainEpochs: {trainEpochs}')
 
-if trainEpochs <= 0:
-    log.info(f'network is already trained on {args["epochs"]} epochs, exiting')
-    log.info('if you want to train the network for longer, set the optional --epochs argument')
-    exit(0)
+check_if_trained_or_exit(trainEpochs, args['epochs'])
 
 # %% prepare data
 
@@ -219,9 +204,5 @@ else:
     log.info(f'epoch: {epochs}')
     modelData = pd.DataFrame(history)
 
-modelPath = path.join('models', args['model'], f'epoch_{epochs}.h5')
-csvPath = path.join('models', args['model'], 'data.csv')
-log.info(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
-model.save(modelPath, save_format='h5')
-modelData.to_csv(csvPath)
-log.info('======================================================================\n\n')
+persist_results(model, modelData, modelFolderPath, epochs)
+printSeparator(with_break=True)

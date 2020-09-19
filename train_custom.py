@@ -2,8 +2,8 @@
 
 from argparse import ArgumentParser
 from os import path, mkdir, environ
-
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # make tensorflow less verbose
+
 import tensorflow as tf
 from tensorflow.keras import models, layers
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -23,7 +23,8 @@ import pandas as pd
 import numpy as np
 from utils.evaluation_callback import EvaluationCallback
 from utils.data import load_dataset
-from utils.constants import CLASSES, IMG_DIMENSIONS_3D
+from utils.constants import *
+from utils.management import *
 
 # set GPU configs, might have to comment out
 # these lines if you're working on a cpu
@@ -37,54 +38,55 @@ parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how ma
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'epochs': 25}  # TODO: comment out
 
-# set modelName
+# check model directory
 modelName = 'Custom'
 modelFolderPath = path.join('models', modelName)
-
-# metadata check # TODO: put this in utils
-if not path.exists(args['dataset']):
-    print(f'[ERROR] the path "{args["dataset"]}" does not exist. Please supply a valid input folder.')
-    exit(1)
-
-# check if necessary folder exists or create it
-if not path.isdir(modelFolderPath):
-    mkdir(modelFolderPath)
+modelDataPath = path.join(modelFolderPath, 'data.csv')
+modelExists = check_and_create_folder(modelFolderPath)
 
 log.basicConfig(
     level=log.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        log.FileHandler(path.join('models', modelName, 'training.log')),
+        log.FileHandler(path.join(modelFolderPath, 'training.log')),
         log.StreamHandler(stdout)
     ]
 )
 
-# %% load data # TODO: put this in utils
+check_and_create_folder('models') # make sure model directory exists
+check_if_exists_or_exit(args['dataset']) # make sure dataset exists
 
-log.info('prepare data')
+printSeparator()
+log.info(f'Starting Training with arguments: {args}')
 
+# %% load data
 trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'])
-
 
 # %% create model
 
 INIT_LR = 1e-3
 BS = 8
 
-model = models.Sequential()
-model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=IMG_DIMENSIONS_3D))
-model.add(layers.MaxPooling2D((2, 2)))
-model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(layers.MaxPooling2D((2, 2)))
-model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(layers.MaxPooling2D((4, 4)))
-model.add(layers.Conv2D(128, (3, 3), activation='relu'))
-model.add(layers.Flatten())
-model.add(layers.Dense(64, activation='relu'))
-model.add(layers.Dropout(0.50))
-model.add(layers.Dense(3, activation="sigmoid"))
+if modelExists:
+    model, modelData, trainEpochs, trainedEpochs = load_existing_model(modelName, modelDataPath, args['epochs'])
+else:
+    # build model
+    model = models.Sequential()
+    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=IMG_DIMENSIONS_3D))
+    model.add(layers.MaxPooling2D((2, 2)))
+    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+    model.add(layers.MaxPooling2D((2, 2)))
+    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+    model.add(layers.MaxPooling2D((4, 4)))
+    model.add(layers.Conv2D(128, (3, 3), activation='relu'))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dropout(0.50))
+    model.add(layers.Dense(3, activation="sigmoid"))
+    # model.summary() # prints model summary
+    trainEpochs, trainedEpochs = args['epochs'], 0
 
-model.summary()
+check_if_trained_or_exit(trainEpochs, args['epochs'])
 
 optimizer = Adam(lr=INIT_LR, decay=INIT_LR / args['epochs'])
 model.compile(
@@ -92,8 +94,6 @@ model.compile(
     loss='binary_crossentropy',
     metrics=['accuracy'],
 )
-
-model.summary()
 
 # %% train model
 
@@ -106,14 +106,12 @@ model.fit(
     epochs=args['epochs'],
 )
 
-# %% after action
+# %% validate model
 
 # save history and epochs for later
 # as history gets deleted when model.predict() is called
 history = model.history.history.copy()
 epochs = len(model.history.epoch)
-
-# %% validate model
 
 predictions = np.argmax(model.predict(testData, batch_size=BS), axis=1)
 report = classification_report(testLabels.argmax(axis=1), predictions, target_names=CLASSES) # TODO: do we even need this?
@@ -122,3 +120,17 @@ log.info(f'Evaluating trained network\n{report}')
 # use as cm[true, pred], from_left: true, from_top: predict
 cm = confusion_matrix(testLabels.argmax(axis=1), predictions)
 log.info(f'confusion matrix\n{cm}')
+
+# %% save model and training progress
+
+if modelExists:
+    epochs += trainedEpochs
+    log.info(f'epoch: {epochs}')
+    modelData = modelData.append(pd.DataFrame(history))
+    modelData.index = np.arange(0, len(modelData))
+else:
+    log.info(f'epoch: {epochs}')
+    modelData = pd.DataFrame(history)
+
+persist_results(model, modelData, modelFolderPath, epochs)
+printSeparator(with_break=True)
