@@ -13,6 +13,7 @@ opencv-contrib-python = "*"
 matplotlib = "*"
 tensorflow = "*"
 sklearn = "*"
+Pipfile = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
