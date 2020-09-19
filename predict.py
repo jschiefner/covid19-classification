@@ -1,6 +1,6 @@
 # %% imports
 
-from os import path, environ
+from os import path, environ, listdir
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 from argparse import ArgumentParser
 from glob import glob
@@ -29,7 +29,7 @@ log.basicConfig(
 parser = ArgumentParser()
 parser.add_argument('dataset', help='folder containing images to predict')
 parser.add_argument('output', help='filepath where output file should be stored')
-parser.add_argument('-m', '--model', required=False, default='VGG16', help='models to be used (VGG16 by default), possible to specify multiple: -m "VGG16 MobileNetV2"')
+parser.add_argument('-m', '--model', required=False, default='all', help='models to be used (uses all it can find by default), possible to specify multiple: -m "VGG16 MobileNetV2"')
 args = vars(parser.parse_args())
 # args = {'dataset': 'images', 'output': 'output.csv', 'model': 'VGG16 ResNet50'} # for development
 
@@ -45,17 +45,33 @@ if len(ext) == 0:
     args['output'] = f'{outpath}.csv'
 
 # check if multiple models given, its ensemble classification then
-models = args['model'].split(" ")
-number_of_models = len(models)
+if args['model']=="all":
+    models2 = listdir('models')
+    models=[]
+    for model in models2:
+        if path.isdir(f'models/{model}'):
+            models.append(model)
+    print(models)
+else:
+    models = args['model'].split(" ")
 
 # verify model paths
 modelDataPaths = []
+notAModelList = []
 for model in models:
-    modelDataPaths.append(path.join('models', model, 'data.csv'))
-    if not path.exists(modelDataPaths[-1]):
+    _path = path.join('models', model, 'data.csv')
+    if not path.exists(_path):
         log.error(f'the model "{model}" has not been trained yet.')
         log.error('Please train the model first before predicting with it.')
-        exit(1)
+        notAModelList.append(model)
+    else:
+        modelDataPaths.append(_path)
+
+for notAModel in notAModelList:
+    models.remove(notAModel)
+
+number_of_models = len(models)
+
 
 # %% load images
 # evtl abfangen falls nicht bilddateien in diesem pfad liegen?
