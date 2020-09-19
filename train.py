@@ -175,7 +175,7 @@ try:
         )]
     )
 except KeyboardInterrupt:
-    log.info(f'interrupted Training at epoch: {len(model.history.epoch)}')
+    log.info(f'interrupted Training at epoch: {len(model.history.epoch)+1}')
 
 # save history and epochs for later
 # as history gets deleted when model.predict() is called
