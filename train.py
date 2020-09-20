@@ -18,7 +18,12 @@ args = vars(parser.parse_args())
 check_if_exists_or_exit(args['dataset'])
 
 # model check
-modelFunc = get_model_by_name(str(args['model'])) # exits if model not exists
+modelFunc = get_model_by_name(str(args['model'])) # returns None if model does not exist
+if modelFunc is None:
+    if not check_if_custom_model_name_exists(str(args['model'])):
+        print(f'[ERROR] Choose an appropriate model to continue, must be one out of: {func_names}.')
+        print(f'[ERROR] Or choose a custom model lying in folder models.')
+        exit(1)
 
 check_and_create_folder('models')
 modelFolderPath = path.join('models', args['model'])

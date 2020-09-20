@@ -1,5 +1,5 @@
 from tensorflow.keras.applications import *
-
+from utils.management import *
 # models
 MODELS = [
     Xception,
@@ -38,6 +38,14 @@ def get_all_model_names():
 
 def get_model_by_name(m):
     if not m in funcs_dict:
-        print(f'[ERROR] Choose an appropriate model to continue, must be one out of: {func_names}.')
-        exit(1)
+        return None
     return funcs_dict[m]
+
+def check_if_custom_model_name_exists(m):
+    mm = find_and_load_models()
+    print(m)
+    print(mm)
+    if m in mm:
+        return True
+    return False
+

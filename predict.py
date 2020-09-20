@@ -30,7 +30,7 @@ log.basicConfig(
 parser = ArgumentParser()
 parser.add_argument('dataset', help='folder containing images to predict')
 parser.add_argument('output', help='filepath where output file should be stored')
-parser.add_argument('-m', '--model', required=False, default='all', help='models to be used (uses all it can find by default), possible to specify multiple: -m "VGG16 MobileNetV2"')
+parser.add_argument('-m', '--model', required=False, default='all', help='models to be used (uses all it can find by default), possible to specify multiple: -m "VGG16 MobileNetV22"')
 args = vars(parser.parse_args())
 # args = {'dataset': 'images', 'output': 'output.csv', 'model': 'VGG16 ResNet50'} # for development
 
