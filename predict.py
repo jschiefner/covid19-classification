@@ -11,6 +11,7 @@ from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
 import logging as log
 from sys import stdout
 import tensorflow as tf
+from utils.management import find_and_load_models
 
 # set GPU configs, might have to comment out
 # these lines if you're working on a cpu
@@ -46,29 +47,20 @@ if len(ext) == 0:
 
 # check if multiple models given, its ensemble classification then
 if args['model']=="all":
-    models2 = listdir('models')
-    models=[]
-    for model in models2:
-        if path.isdir(f'models/{model}'):
-            models.append(model)
-    print(models)
+    models = find_and_load_models()
 else:
     models = args['model'].split(" ")
 
 # verify model paths
 modelDataPaths = []
-notAModelList = []
 for model in models:
     _path = path.join('models', model, 'data.csv')
     if not path.exists(_path):
         log.error(f'the model "{model}" has not been trained yet.')
         log.error('Please train the model first before predicting with it.')
-        notAModelList.append(model)
+        exit(1)
     else:
         modelDataPaths.append(_path)
-
-for notAModel in notAModelList:
-    models.remove(notAModel)
 
 number_of_models = len(models)
 

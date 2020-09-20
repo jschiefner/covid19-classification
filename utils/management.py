@@ -1,4 +1,4 @@
-from os import path, mkdir
+from os import path, mkdir, listdir
 from tensorflow.keras.models import load_model
 from glob import glob
 import pandas as pd
@@ -53,3 +53,17 @@ def persist_results(model, model_data, model_folder_path, epochs):
     log.info(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
     model.save(modelPath, save_format='h5')
     model_data.to_csv(csvPath)
+
+def find_and_load_models():
+    files = listdir("models")
+    models = []
+    for f in files:
+        _path = path.join('models',f, 'data.csv')
+        #print(_path)
+        if path.exists(_path):
+            models.append(f)
+    #print(files)
+    #print(models)
+    #exit(0)
+    return models
+
