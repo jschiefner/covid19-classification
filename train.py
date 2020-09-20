@@ -4,10 +4,12 @@ from argparse import ArgumentParser
 from os import path, mkdir, environ
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 from utils.management import *
+from utils.constants import *
+from utils.base_models import *
 
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
-parser.add_argument("-m", "--model", default="VGG16", help="specify optional network")
+parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. {get_all_model_names()}")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
@@ -16,41 +18,7 @@ args = vars(parser.parse_args())
 check_if_exists_or_exit(args['dataset'])
 
 # model check
-from tensorflow.keras.applications import *
-MODELS = [
-    Xception,
-    VGG16,
-    VGG19,
-    ResNet50,
-    ResNet101,
-    ResNet152,
-    ResNet50V2,
-    ResNet101V2,
-    ResNet152V2,
-    InceptionV3,
-    InceptionResNetV2,
-    MobileNet,
-    MobileNetV2,
-    DenseNet121,
-    DenseNet169,
-    DenseNet201,
-    NASNetMobile,
-    NASNetLarge,
-    EfficientNetB0,
-    EfficientNetB1,
-    EfficientNetB2,
-    EfficientNetB3,
-    EfficientNetB4,
-    EfficientNetB5,
-    EfficientNetB6,
-    EfficientNetB7,
-]
-func_names = [m.__name__ for m in MODELS]
-funcs_dict = dict(zip(func_names, MODELS))
-if not str(args['model']) in funcs_dict:
-    print(f'[ERROR] Choose an appropriate model to continue, must be one out of: {func_names}.')
-    exit(1)
-modelFunc = funcs_dict[str(args['model'])]
+modelFunc = get_model_by_name(str(args['model'])) # exits if model not exists
 
 check_and_create_folder('models')
 modelFolderPath = path.join('models', args['model'])
@@ -82,7 +50,7 @@ from sys import stdout
 import pandas as pd
 import numpy as np
 from utils.evaluation_callback import EvaluationCallback
-from utils.constants import *
+
 # from utils.evaluation import evaluate_confusion_matrix, log_confusion_matrix
 from utils.data import *
 
@@ -115,7 +83,7 @@ if modelExists:
 else:
     log.info('Model does not exist yet, creating a new one')
     baseModel = modelFunc(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
-    log.info(f'baseModel: {baseModel}')
+    log.info(f'baseModel: {args["model"]}')      # ehemals "baseModel", aber es soll doch der Name angezeigt werden oder?
     # construct head of model that will be placed on top of the base model
     headModel = baseModel.output
     # headModel = GaussianNoise(stddev=1.0)(headModel)
