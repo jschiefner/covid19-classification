@@ -5,12 +5,12 @@ from os import path, mkdir, environ
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 from utils.management import *
 from utils.constants import *
-from utils.base_models import *
+#from utils.base_models import *
 
 
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
-parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. {get_all_model_names()}")
+parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
@@ -20,12 +20,15 @@ check_if_exists_or_exit(args['dataset'])
 
 
 # model check
-modelFunc = get_model_by_name(str(args['model'])) # returns None if model does not exist
-if modelFunc is None:
-    if not check_if_custom_model_name_exists(str(args['model'])):
-        print(f'[ERROR] Choose an appropriate model to continue, must be one out of: {func_names}.')
-        print(f'[ERROR] Or choose a custom model lying in folder models.')
-        exit(1)
+#modelFunc = get_model_by_name(str(args['model'])) # returns None if model does not exist
+#if modelFunc is None:
+#    if not check_if_custom_model_name_exists(str(args['model'])):
+#        print(f'[ERROR] Choose an appropriate model to continue, must be one out of: {func_names}.')
+#        print(f'[ERROR] Or choose a custom model lying in folder models.')
+#        exit(1)
+
+from tensorflow.keras.applications import MobileNetV2
+modelFunc = MobileNetV2
 
 check_and_create_folder('models')
 modelFolderPath = path.join('models', args['model'])
