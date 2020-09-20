@@ -41,11 +41,4 @@ def get_model_by_name(m):
         return None
     return funcs_dict[m]
 
-def check_if_custom_model_name_exists(m):
-    mm = find_and_load_models()
-    print(m)
-    print(mm)
-    if m in mm:
-        return True
-    return False
 

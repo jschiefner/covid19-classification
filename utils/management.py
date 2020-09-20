@@ -67,3 +67,11 @@ def find_and_load_models():
     #exit(0)
     return models
 
+def check_if_custom_model_name_exists(m):
+    mm = find_and_load_models()
+    print(m)
+    print(mm)
+    if m in mm:
+        return True
+    return False
+

@@ -7,6 +7,7 @@ from utils.management import *
 from utils.constants import *
 from utils.base_models import *
 
+
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. {get_all_model_names()}")
