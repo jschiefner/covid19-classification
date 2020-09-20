@@ -18,6 +18,7 @@ args = vars(parser.parse_args())
 # metadata check
 check_if_exists_or_exit(args['dataset'])
 
+
 # model check
 modelFunc = get_model_by_name(str(args['model'])) # returns None if model does not exist
 if modelFunc is None:
