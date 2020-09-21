@@ -131,6 +131,8 @@ trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
+from tf_explain.callbacks.grad_cam import GradCAMCallback
+
 # train network head, H not needed for now
 # holds useful information about training progress
 try:
@@ -152,6 +154,10 @@ try:
             batch_size=BS,
             model_name=args['model'],
             trained_epochs=trainedEpochs,
+        ),GradCAMCallback( # möglich als callback aber denke extern reicht auch
+            validation_data=(valX, valY),
+            class_index=0,
+            output_dir="visualized",
         )]
     )
 except KeyboardInterrupt:
