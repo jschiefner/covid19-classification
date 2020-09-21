@@ -154,6 +154,7 @@ try:
             batch_size=BS,
             model_name=args['model'],
             trained_epochs=trainedEpochs,
+            period=5
         ),GradCAMCallback( # möglich als callback aber denke extern reicht auch
             validation_data=(valX, valY),
             class_index=0,
