@@ -12,6 +12,7 @@ parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
+parser.add_argument('--visualize',default=False,type=bool, help='set true to run tf-explain as callback')
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
 
@@ -110,7 +111,9 @@ else:
         Dense(3, activation='softmax')
     ])
 
-    #model.summary()
+
+
+    model.summary()
 
 
     trainEpochs = args['epochs']
@@ -163,7 +166,9 @@ try:
             #period=5
         )
 
-    callbacks = [callback_modelcheckpoint, callback_evaluation, callback_gradcam]
+    callbacks = [callback_modelcheckpoint,
+                 callback_evaluation]
+    if args['visualize']: callbacks.append(callback_gradcam)
 
     model.fit(
         trainAug.flow(trainX, trainY, batch_size=BS),
