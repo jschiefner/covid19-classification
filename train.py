@@ -136,13 +136,7 @@ from tf_explain.callbacks.grad_cam import GradCAMCallback
 # train network head, H not needed for now
 # holds useful information about training progress
 try:
-    model.fit(
-        trainAug.flow(trainX, trainY, batch_size=BS),
-        steps_per_epoch=len(trainX) // BS,
-        validation_data=(valX, valY),
-        validation_steps=len(valX) // BS,
-        epochs=trainEpochs,
-        callbacks=[ModelCheckpoint(
+    callbacks = [ModelCheckpoint(
             filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
             monitor='val_loss',
             save_weights_only=True,
@@ -155,11 +149,20 @@ try:
             model_name=args['model'],
             trained_epochs=trainedEpochs,
             #period=5
-        ),GradCAMCallback( # möglich als callback aber denke extern reicht auch
-            validation_data=(valX, valY),
-            class_index=0,
-            output_dir="visualized",
-        )]
+        ), #GradCAMCallback( # möglich als callback aber denke extern reicht auch
+           # validation_data=(valX, valY),
+           # class_index=0,
+           # output_dir="visualized",
+        #)
+    ]
+
+    model.fit(
+        trainAug.flow(trainX, trainY, batch_size=BS),
+        steps_per_epoch=len(trainX) // BS,
+        validation_data=(valX, valY),
+        validation_steps=len(valX) // BS,
+        epochs=trainEpochs,
+        callbacks=callbacks,
     )
 except KeyboardInterrupt:
     print()

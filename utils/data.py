@@ -72,7 +72,7 @@ def load_dataset(datasetPath):
 
     metadata = pd.read_csv(path.join(datasetPath, 'metadata.csv'), usecols=['File', 'No Finding', 'Covid'],
                            dtype={'File': np.str, 'No Finding': np.bool, 'Covid': np.bool})
-    #metadata = metadata[200:2100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
+    metadata = metadata[1000:1100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
     data = []
     labels = []
     for _idx, (file, noFinding, covid) in metadata.iterrows():
@@ -94,8 +94,9 @@ def load_dataset(datasetPath):
     log.info('encode labels')
 
     # one hot encoding labels
-    lb = LabelBinarizer() #.fit(CLASSES) # !!! changes order of classes: covid, other, healthy
-    labels = lb.fit_transform(labels)
+    lb = LabelBinarizer() #.
+    lb.fit(CLASSES) # !!! changes order of classes: covid, other, healthy
+    labels = lb.transform(labels)
 
     log.info((count(labels)))
 
