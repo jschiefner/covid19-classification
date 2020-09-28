@@ -45,8 +45,9 @@ else:
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout, GaussianNoise
-from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout, GaussianNoise, Concatenate
+from tensorflow.keras.models import Model, load_model, Sequential
+
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.preprocessing import LabelBinarizer
@@ -91,23 +92,27 @@ if modelExists:
     model, modelData, trainEpochs, trainedEpochs = load_existing_model(args['model'], modelDataPath, args['epochs'])
 else:
     log.info('Model does not exist yet, creating a new one')
-    baseModel = modelFunc(weights='imagenet', include_top=False, input_tensor=Input(shape=(224, 224, 3)))
+    baseModel = modelFunc(weights='imagenet', include_top=False, input_shape=(224,224,3),input_tensor=Input(shape=(224, 224, 3)))
+    baseModel.trainable = False
+    baseModel.summary()
+
     log.info(f'baseModel: {args["model"]}')      # ehemals "baseModel", aber es soll doch der Name angezeigt werden oder?
     # construct head of model that will be placed on top of the base model
-    headModel = baseModel.output
-    # headModel = GaussianNoise(stddev=1.0)(headModel)
-    headModel = AveragePooling2D(pool_size=(4, 4))(headModel)
-    headModel = Flatten(name='flatten1')(headModel)
-    headModel = Dense(256, activation='relu')(headModel)
-    headModel = Dense(128, activation='relu')(headModel)
-    headModel = Dense(64, activation='relu')(headModel)
-    headModel = Dropout(0.5)(headModel)
-    headModel = Dense(3, activation='softmax')(headModel)
     # denke unser headmodel ist zu klein für 3 klassen, sollten hier noch ein wenig herumprobieren
 
-    for layer in baseModel.layers:
-        layer.trainable = False
-    model = Model(inputs=baseModel.input, outputs=headModel)
+    model = Sequential([
+        baseModel,
+        AveragePooling2D(name='pool_test',pool_size=(4, 4)),
+        Flatten(name='flatten1'),
+        Dense(128, activation='relu'),
+        Dense(64, activation='relu'),
+        Dropout(0.5),
+        Dense(3, activation='softmax')
+    ])
+
+    #model.summary()
+
+
     trainEpochs = args['epochs']
     trainedEpochs = 0
     log.info(f'trainEpochs: {trainEpochs}')
@@ -136,25 +141,29 @@ from tf_explain.callbacks.grad_cam import GradCAMCallback
 # train network head, H not needed for now
 # holds useful information about training progress
 try:
-    callbacks = [ModelCheckpoint(
+    callback_gradcam = GradCAMCallback(  # möglich als callback aber denke extern reicht auch
+        validation_data=(valX, valY),
+        class_index=0,
+        output_dir="visualized",
+        layer_name='out_relu'
+        )
+    callback_modelcheckpoint = ModelCheckpoint(
             filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
             monitor='val_loss',
             save_weights_only=True,
             save_best_only=True,
             #period=3,
-        ), EvaluationCallback( # TODO: specify how often inbetween model should be saved!
+        )
+    callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween model should be saved!
             test_data=testData,
             test_labels=testLabels,
             batch_size=BS,
             model_name=args['model'],
             trained_epochs=trainedEpochs,
             #period=5
-        ), #GradCAMCallback( # möglich als callback aber denke extern reicht auch
-           # validation_data=(valX, valY),
-           # class_index=0,
-           # output_dir="visualized",
-        #)
-    ]
+        )
+
+    callbacks = [callback_modelcheckpoint, callback_evaluation, callback_gradcam]
 
     model.fit(
         trainAug.flow(trainX, trainY, batch_size=BS),

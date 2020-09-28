@@ -70,7 +70,7 @@ number_of_models = len(models)
 # evtl abfangen falls nicht bilddateien in diesem pfad liegen?
 data = []
 imageList = glob(path.join(args['dataset'], '*'))
-imageList = imageList[0:100] # TODO: remove this, just for development purposes
+imageList = imageList[0:500] # TODO: remove this, just for development purposes
 for file in imageList:
     image = imread(file)
     image = cvtColor(image, COLOR_BGR2RGB)
@@ -106,17 +106,17 @@ for predictions, model in zip(predictionsList, models):
 
 
 # TODO ensemble classikator
-'''
+
 # ensemble stuff here
-if number_of_models > 1:
-    temp = np.zeros(len(fileNames))
-    for predictions, model in zip(predictionsList, models):
-        temp += [(1 if np.argmax(prediction) == 0 else 0) for prediction in predictions] # 100% covid == [1,0,0]
-    outputDict['Covid [Ensemble Majority]'] = [t*2 >= number_of_models for t in temp]
+#if number_of_models > 1:
+#    temp = np.zeros(len(fileNames))
+#    for predictions, model in zip(predictionsList, models):
+#        temp += [(1 if np.argmax(prediction) == 0 else 0) for prediction in predictions] # 100% covid == [1,0,0]
+#    outputDict['Covid [Ensemble Majority]'] = [t*2 >= number_of_models for t in temp]
 
 # ensemble stuff here
 if number_of_models > 1:
-    n = len(predictions[0])
+    n = len(predictionsList[0])
     ensemble = []
     for i in range(n):
         count = [0,0,0]
@@ -132,7 +132,21 @@ if number_of_models > 1:
         else:
             ensemble.append("")
     outputDict['Covid [Ensemble Majority]'] = ensemble
-'''
+    #print(outputDict['Covid [Ensemble Majority]'])
+    ensemble = []
+    for i in range(n):
+        s = 0.0
+        for j in range(number_of_models):
+            s+=predictionsList[j][i][0]
+        s/=number_of_models
+        ensemble.append(s)
+    outputDict['Covid Ensemble'] = ensemble
+
+    #print(outputDict['Covid Ensemble'])
+
+
+
+
 
 for predictions, model in zip(predictionsList, models):
     outputDict[f'Covid (probability)[{model}]'] = predictions[:, 0]
