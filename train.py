@@ -145,7 +145,7 @@ try:
         validation_data=(valX, valY),
         class_index=0,
         output_dir="visualized",
-        layer_name='out_relu'
+        layer_name='flatten1' # mmh
         )
     callback_modelcheckpoint = ModelCheckpoint(
             filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
