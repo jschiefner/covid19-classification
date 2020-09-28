@@ -10,13 +10,14 @@ from utils.base_models import *
 
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
-parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. {get_all_model_names()}")
+parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
 
 # metadata check
 check_if_exists_or_exit(args['dataset'])
+
 
 # model check
 modelFunc = get_model_by_name(str(args['model'])) # returns None if model does not exist
@@ -25,6 +26,8 @@ if modelFunc is None:
         print(f'[ERROR] Choose an appropriate model to continue, must be one out of: {func_names}.')
         print(f'[ERROR] Or choose a custom model lying in folder models.')
         exit(1)
+
+
 
 check_and_create_folder('models')
 modelFolderPath = path.join('models', args['model'])
@@ -94,10 +97,13 @@ else:
     headModel = baseModel.output
     # headModel = GaussianNoise(stddev=1.0)(headModel)
     headModel = AveragePooling2D(pool_size=(4, 4))(headModel)
-    headModel = Flatten(name='flatten')(headModel)
+    headModel = Flatten(name='flatten1')(headModel)
+    headModel = Dense(256, activation='relu')(headModel)
+    headModel = Dense(128, activation='relu')(headModel)
     headModel = Dense(64, activation='relu')(headModel)
     headModel = Dropout(0.5)(headModel)
     headModel = Dense(3, activation='softmax')(headModel)
+    # denke unser headmodel ist zu klein für 3 klassen, sollten hier noch ein wenig herumprobieren
 
     for layer in baseModel.layers:
         layer.trainable = False
@@ -125,31 +131,44 @@ trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
+from tf_explain.callbacks.grad_cam import GradCAMCallback
+
 # train network head, H not needed for now
 # holds useful information about training progress
 try:
-    model.fit(
-        trainAug.flow(trainX, trainY, batch_size=BS),
-        steps_per_epoch=len(trainX) // BS,
-        validation_data=(valX, valY),
-        validation_steps=len(valX) // BS,
-        epochs=trainEpochs,
-        callbacks=[ModelCheckpoint(
+    callbacks = [ModelCheckpoint(
             filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
             monitor='val_loss',
             save_weights_only=True,
             save_best_only=True,
-            period=3,
+            #period=3,
         ), EvaluationCallback( # TODO: specify how often inbetween model should be saved!
             test_data=testData,
             test_labels=testLabels,
             batch_size=BS,
             model_name=args['model'],
             trained_epochs=trainedEpochs,
-        )]
+            #period=5
+        ), #GradCAMCallback( # möglich als callback aber denke extern reicht auch
+           # validation_data=(valX, valY),
+           # class_index=0,
+           # output_dir="visualized",
+        #)
+    ]
+
+    model.fit(
+        trainAug.flow(trainX, trainY, batch_size=BS),
+        steps_per_epoch=len(trainX) // BS,
+        validation_data=(valX, valY),
+        validation_steps=len(valX) // BS,
+        epochs=trainEpochs,
+        callbacks=callbacks,
     )
 except KeyboardInterrupt:
+    print()
     log.info(f'interrupted Training at epoch: {len(model.history.epoch)+1}')
+    if len(model.history.epoch)==0:
+        exit(0)
 
 # save history and epochs for later
 # as history gets deleted when model.predict() is called

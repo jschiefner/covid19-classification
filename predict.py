@@ -12,6 +12,7 @@ import logging as log
 from sys import stdout
 import tensorflow as tf
 from utils.management import find_and_load_models
+from utils.constants import CLASSES
 
 # set GPU configs, might have to comment out
 # these lines if you're working on a cpu
@@ -69,7 +70,7 @@ number_of_models = len(models)
 # evtl abfangen falls nicht bilddateien in diesem pfad liegen?
 data = []
 imageList = glob(path.join(args['dataset'], '*'))
-imageList = imageList[0:3] # TODO: remove this, just for development purposes
+imageList = imageList[0:100] # TODO: remove this, just for development purposes
 for file in imageList:
     image = imread(file)
     image = cvtColor(image, COLOR_BGR2RGB)
@@ -87,7 +88,9 @@ for modelDataPath, model in zip(modelDataPaths, models):
     modelPath = path.join('models', model, f'epoch_{epochs}.h5')
     model = load_model(modelPath)
     log.info(f'successfully loaded "{modelPath}"')
+    log.info(f'predicting...')
     predictionsList.append(model.predict(data))
+    log.info(f'done')
 
 log.info('predictions have been calculated')
 
@@ -95,15 +98,41 @@ log.info('predictions have been calculated')
 fileNames = [path.basename(file) for file in imageList]
 outputDict = {'File': fileNames}
 
-for predictions, model in zip(predictionsList, models):
-    outputDict[f'Covid [{model}]'] = [np.argmax(prediction) == 0 for prediction in predictions]
 
+
+# diese ausgabe ist wenig nützlich
+for predictions, model in zip(predictionsList, models):
+    outputDict[f'argmax [{model}]'] = [CLASSES[np.argmax(prediction)] for prediction in predictions]
+
+
+# TODO ensemble classikator
+'''
 # ensemble stuff here
 if number_of_models > 1:
     temp = np.zeros(len(fileNames))
     for predictions, model in zip(predictionsList, models):
         temp += [(1 if np.argmax(prediction) == 0 else 0) for prediction in predictions] # 100% covid == [1,0,0]
     outputDict['Covid [Ensemble Majority]'] = [t*2 >= number_of_models for t in temp]
+
+# ensemble stuff here
+if number_of_models > 1:
+    n = len(predictions[0])
+    ensemble = []
+    for i in range(n):
+        count = [0,0,0]
+        for j in range(number_of_models):
+            count[np.argmax(predictionsList[j][i])]+=1
+
+        if count[0]>count[1] and count[0]>count[2]:
+            ensemble.append(CLASSES[0])
+        elif count[1] > count[0] and count[1] > count[2]:
+            ensemble.append(CLASSES[1])
+        elif count[2] > count[0] and count[2] > count[1]:
+            ensemble.append(CLASSES[2])
+        else:
+            ensemble.append("")
+    outputDict['Covid [Ensemble Majority]'] = ensemble
+'''
 
 for predictions, model in zip(predictionsList, models):
     outputDict[f'Covid (probability)[{model}]'] = predictions[:, 0]

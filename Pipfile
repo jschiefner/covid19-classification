@@ -11,7 +11,7 @@ numpy = "*"
 pandas = "*"
 opencv-contrib-python = "*"
 matplotlib = "*"
-tensorflow = "*"
+tensorflow = "2.2.0"
 sklearn = "*"
 pipfile = "*"
 
