@@ -72,13 +72,10 @@ def load_dataset(datasetPath):
 
     metadata = pd.read_csv(path.join(datasetPath, 'metadata.csv'), usecols=['File', 'No Finding', 'Covid'],
                            dtype={'File': np.str, 'No Finding': np.bool, 'Covid': np.bool})
-    metadata = metadata[0:2100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
-    #print(metadata)
+    #metadata = metadata[200:2100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
     data = []
     labels = []
-
     for _idx, (file, noFinding, covid) in metadata.iterrows():
-        #print(f"{covid} and {noFinding}")
         if covid: label = CLASSES[0] # covid
         elif noFinding: label = CLASSES[2] # healthy
         else: label = CLASSES[1] # other
@@ -97,21 +94,15 @@ def load_dataset(datasetPath):
     log.info('encode labels')
 
     # one hot encoding labels
-    lb = LabelBinarizer().fit(CLASSES) # !!! changes order of classes: covid, other, healthy
-    labels = lb.transform(labels)
+    lb = LabelBinarizer() #.fit(CLASSES) # !!! changes order of classes: covid, other, healthy
+    labels = lb.fit_transform(labels)
 
-    #labels = to_categorical(labels) # TODO: is this really not necessary?
+    log.info((count(labels)))
 
     # own onehot encoder
     #labels = oneHotEncoder(labels)
 
-    count=[0,0,0]
-    for lab in labels:
-        #print(lab)
-        count[np.argmax(lab)]+=1
-    print(f"count {count}")
-    print(CLASSES)
-    #exit(0) # die ausgaben ergeben kein sinn, es muss ein fehler beim einlesen oder labeln geben
+
     # datasplit
     log.info('splitting data')
     # use last 1/3rd of data for validation
@@ -143,3 +134,9 @@ def oneHotEncoder(labels):
         hotEncoded.append(t)
     return hotEncoded
 
+def count(labels):
+    count = [0, 0, 0]
+    for lab in labels:
+        # print(lab)
+        count[np.argmax(lab)] += 1
+    return(f"label prevelancecount {count}")

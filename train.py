@@ -147,14 +147,14 @@ try:
             monitor='val_loss',
             save_weights_only=True,
             save_best_only=True,
-            period=3,
+            #period=3,
         ), EvaluationCallback( # TODO: specify how often inbetween model should be saved!
             test_data=testData,
             test_labels=testLabels,
             batch_size=BS,
             model_name=args['model'],
             trained_epochs=trainedEpochs,
-            period=5
+            #period=5
         ),GradCAMCallback( # möglich als callback aber denke extern reicht auch
             validation_data=(valX, valY),
             class_index=0,
