@@ -14,6 +14,7 @@ matplotlib = "*"
 tensorflow = "2.2.0"
 sklearn = "*"
 pipfile = "*"
+progress = "*"
 
 [requires]
 python_version = "3.6"

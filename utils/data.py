@@ -7,25 +7,28 @@ from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
 from os import path
 from utils.constants import CLASSES, IMG_DIMENSIONS
 import logging as log
+from progress.bar import Bar
 
 def load_dataset(datasetPath,validation_after_train_split=0.33):
     log.info(f'loading data from "{datasetPath}"')
 
     metadata = pd.read_csv(path.join(datasetPath, 'metadata.csv'), usecols=['File', 'No Finding', 'Covid'],
                            dtype={'File': np.str, 'No Finding': np.bool, 'Covid': np.bool})
-    metadata = metadata[0:200] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
+    # metadata = metadata[0:200] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
     data = []
     labels = []
-    for _idx, (file, noFinding, covid) in metadata.iterrows():
-        if covid: label = CLASSES[0] # covid
-        elif noFinding: label = CLASSES[1] # healthy
-        else: label = CLASSES[2] # other
-        image = imread(path.join(datasetPath, 'images', file))
-        image = cvtColor(image, COLOR_BGR2RGB)
-        image = resize(image, IMG_DIMENSIONS)
+    with Bar('Loading images', max=len(metadata)) as bar:
+        for _idx, (file, noFinding, covid) in metadata.iterrows():
+            bar.next()
+            if covid: label = CLASSES[0] # covid
+            elif noFinding: label = CLASSES[1] # healthy
+            else: label = CLASSES[2] # other
+            image = imread(path.join(datasetPath, 'images', file))
+            image = cvtColor(image, COLOR_BGR2RGB)
+            image = resize(image, IMG_DIMENSIONS)
 
-        data.append(image)
-        labels.append(label)
+            data.append(image)
+            labels.append(label)
 
     data = np.array(data) / 255.0
     labels = np.array(labels)
