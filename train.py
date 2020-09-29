@@ -90,7 +90,7 @@ if modelExists:
     model, modelData, trainEpochs, trainedEpochs = load_existing_model(args['model'], modelDataPath, args['epochs'])
 else:
     log.info('Model does not exist yet, creating a new one')
-    baseModel = modelFunc(weights='imagenet', include_top=False, input_shape=(224,224,3),input_tensor=Input(shape=(224, 224, 3)))
+    baseModel = modelFunc(weights='imagenet', include_top=False, input_shape=IMG_DIMENSIONS_3D,input_tensor=Input(shape=IMG_DIMENSIONS_3D))
     baseModel.trainable = False
     baseModel.summary()
 

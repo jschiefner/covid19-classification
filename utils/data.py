@@ -42,9 +42,6 @@ def load_dataset(datasetPath,validation_after_train_split=0.33):
     # print(lb.transform(['healthy']))
     # print(lb.transform(['other']))
 
-    # own onehot encoder
-    #labels = oneHotEncoder(labels)
-
     log.info((count(labels)))
 
     # datasplit
