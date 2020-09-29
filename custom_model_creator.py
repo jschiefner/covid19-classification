@@ -25,12 +25,17 @@ from utils.evaluation_callback import EvaluationCallback
 from utils.data import load_dataset
 from utils.constants import *
 from utils.management import *
+from argparse import ArgumentParser
 
+parser = ArgumentParser()
+parser.add_argument('modelName', help='how your custom model should be called')
+args = vars(parser.parse_args())
 
-modelName = 'Custom2'
-modelFolderPath = path.join('models', modelName)
+modelFolderPath = path.join('models', args['modelName'])
 modelDataPath = path.join(modelFolderPath, 'data.csv')
-modelExists = check_and_create_folder(modelFolderPath)
+if check_and_create_folder(modelFolderPath):
+    print(f'The model "{args["modelName"]}" already exists. Please choose another name')
+    exit(1)
 
 log.basicConfig(
     level=log.INFO,
@@ -42,15 +47,14 @@ log.basicConfig(
 )
 
 check_and_create_folder('models') # make sure model directory exists
-
 printSeparator()
-
 
 # %% create model
 
 INIT_LR = 1e-3
 BS = 8
 epochs=10
+
 # build model
 model = models.Sequential()
 model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=IMG_DIMENSIONS_3D))
@@ -66,16 +70,12 @@ model.add(layers.Dropout(0.50))
 model.add(layers.Dense(3, activation="sigmoid"))
 model.summary() # prints model summary
 
-optimizer = Adam(lr=INIT_LR, decay=INIT_LR /epochs)
+optimizer = Adam(lr=INIT_LR, decay=INIT_LR / epochs)
 model.compile(
     optimizer=optimizer,
     loss='binary_crossentropy',
     metrics=['accuracy'],
 )
-
-# %% train model
-
-
 
 # %% save model
 
@@ -85,5 +85,4 @@ log.info(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
 model.save(modelPath, save_format='h5')
 df = pd.DataFrame({'loss':[],'accuracy':[],'val_loss':[],'val_accuracy':[]})  # ,loss,accuracy,val_loss,val_accuracy
 df.to_csv(csvPath)
-
-
+printSeparator()
