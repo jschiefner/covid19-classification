@@ -12,13 +12,12 @@ parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
-parser.add_argument('--visualize',default=False,type=bool, help='set true to run tf-explain as callback')
+parser.add_argument('--visualize', default=False, type=bool, help='set true to run tf-explain as callback')
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
 
 # metadata check
 check_if_exists_or_exit(args['dataset'])
-
 
 # model check
 modelFunc = get_model_by_name(str(args['model'])) # returns None if model does not exist
@@ -27,8 +26,6 @@ if modelFunc is None:
         print(f'[ERROR] Choose an appropriate model to continue, must be one out of: {func_names}.')
         print(f'[ERROR] Or choose a custom model lying in folder models.')
         exit(1)
-
-
 
 check_and_create_folder('models')
 modelFolderPath = path.join('models', args['model'])
@@ -97,13 +94,13 @@ else:
     baseModel.trainable = False
     baseModel.summary()
 
-    log.info(f'baseModel: {args["model"]}')      # ehemals "baseModel", aber es soll doch der Name angezeigt werden oder?
+    log.info(f'baseModel: {args["model"]}')
     # construct head of model that will be placed on top of the base model
     # denke unser headmodel ist zu klein für 3 klassen, sollten hier noch ein wenig herumprobieren
 
     model = Sequential([
         baseModel,
-        AveragePooling2D(name='pool_test',pool_size=(4, 4)),
+        AveragePooling2D(name='pool_test', pool_size=(4, 4)),
         Flatten(name='flatten1'),
         Dense(128, activation='relu'),
         Dense(64, activation='relu'),
@@ -111,10 +108,7 @@ else:
         Dense(3, activation='softmax')
     ])
 
-
-
     model.summary()
-
 
     trainEpochs = args['epochs']
     trainedEpochs = 0

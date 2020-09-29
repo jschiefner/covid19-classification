@@ -8,8 +8,6 @@ from os import path
 from utils.constants import CLASSES, IMG_DIMENSIONS
 import logging as log
 
-
-
 def load_dataset(datasetPath,validation_after_train_split=0.33):
     log.info(f'loading data from "{datasetPath}"')
 
@@ -40,16 +38,14 @@ def load_dataset(datasetPath,validation_after_train_split=0.33):
     lb = LabelBinarizer() #.
     lb.fit(CLASSES) # !!! changes order of classes: covid, other, healthy
     labels = lb.transform(labels)
-    print(lb.transform(['covid']))
-    print(lb.transform(['healthy']))
-    print(lb.transform(['other']))
-
+    # print(lb.transform(['covid']))
+    # print(lb.transform(['healthy']))
+    # print(lb.transform(['other']))
 
     # own onehot encoder
     #labels = oneHotEncoder(labels)
 
     log.info((count(labels)))
-
 
     # datasplit
     log.info('splitting data')
@@ -69,18 +65,6 @@ def load_dataset(datasetPath,validation_after_train_split=0.33):
                                                     stratify=trainValidationLabels)  # random_state=42
     log.info(f'selected {len(trainX)} images for training and {len(valX)} images for validation (during training)')
     return trainX, valX, trainY, valY, testData, testLabels
-
-def oneHotEncoder(labels):
-    hotEncoded = []
-    n = len(CLASSES)
-    for d in labels:
-        t = [0 for _ in range(n)]
-        for i in range(n):
-            if d==CLASSES[i]:
-                t[i]=1
-                break
-        hotEncoded.append(t)
-    return np.array(hotEncoded)
 
 def count(labels):
     count = [0 for _ in range(len(CLASSES))]

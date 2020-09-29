@@ -83,8 +83,10 @@ else:
     model.add(layers.Dense(64, activation='relu'))
     model.add(layers.Dropout(0.50))
     model.add(layers.Dense(3, activation="sigmoid"))
-    # model.summary() # prints model summary
+
     trainEpochs, trainedEpochs = args['epochs'], 0
+
+model.summary() # print model summary
 
 check_if_trained_or_exit(trainEpochs, args['epochs'])
 
