@@ -9,7 +9,7 @@ from utils.constants import CLASSES, IMG_DIMENSIONS
 import logging as log
 from progress.bar import Bar
 
-def load_dataset(datasetPath,validation_after_train_split=0.33):
+def load_dataset(datasetPath, validation_after_train_split=0.33):
     log.info(f'loading data from "{datasetPath}"')
 
     metadata = pd.read_csv(path.join(datasetPath, 'metadata.csv'), usecols=['File', 'No Finding', 'Covid'],
@@ -38,26 +38,27 @@ def load_dataset(datasetPath,validation_after_train_split=0.33):
     log.info('encode labels')
 
     # one hot encoding labels
-    lb = LabelBinarizer() #.
+    lb = LabelBinarizer()
     lb.fit(CLASSES) # !!! changes order of classes: covid, other, healthy
     labels = lb.transform(labels)
-    # print(lb.transform(['covid']))
-    # print(lb.transform(['healthy']))
-    # print(lb.transform(['other']))
 
-    log.info((count(labels)))
+    log.info(f'overall label prevalence count: {prevalence_count(labels)}')
 
     # datasplit
     log.info('splitting data')
     # first chunk for train data
-    # second chunk for the validation after training with fresh images
     splitPoint = dataLength-int(dataLength*validation_after_train_split)
     trainValidationData = data[:splitPoint]
     trainValidationLabels = labels[:splitPoint]
+    # second chunk for the testing after training with fresh images
     testData = data[splitPoint:]
     testLabels = labels[splitPoint:]
 
-    log.info(f'selected {len(testData)} images for validation after training')
+    log.info(f'train/validation label prevalence count: {prevalence_count(trainValidationLabels)}')
+    log.info(f'test label prevalence count: {prevalence_count(testLabels)}')
+
+    log.info(f'selected {len(trainValidationData)} images for training/validation during training')
+    log.info(f'selected {len(testData)} images for testing after each epoch and after training')
 
     # random_stateint Controls the shuffling applied to the data before applying the split.
     # pass an int for reproducible output across multiple function calls. See Glossary.
@@ -66,9 +67,8 @@ def load_dataset(datasetPath,validation_after_train_split=0.33):
     log.info(f'selected {len(trainX)} images for training and {len(valX)} images for validation (during training)')
     return trainX, valX, trainY, valY, testData, testLabels
 
-def count(labels):
+def prevalence_count(labels):
     count = [0 for _ in range(len(CLASSES))]
     for lab in labels:
-        # print(lab)
         count[np.argmax(lab)] += 1
-    return(f"label prevelance count {count}")
+    return count
