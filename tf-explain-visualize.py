@@ -52,13 +52,14 @@ for f in files:
         # Load a sample image (or multiple ones)
         img = tf.keras.preprocessing.image.load_img(f"{sys.argv[2]}/{f}", target_size=(224, 224))
         img = tf.keras.preprocessing.image.img_to_array(img)
+        img /= 255.0
         imgdata.append(img)
     except:
         print(f"Error encountered: {f}")
 
 data = (imgdata, None)
 # Start explainer
-grid = explainer.explain(data, model,class_index=0)  #
+grid = explainer.explain(data, model,class_index=0, layer_name='Conv_1')  #
 explainer.save(grid, "visualized", f"grad_cam_corona_0-24.png")
 print(f"GradCam image created and saved: {f}")
 

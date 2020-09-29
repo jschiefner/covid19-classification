@@ -12,7 +12,7 @@ parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
-parser.add_argument('--visualize', default=False, type=bool, help='set true to run tf-explain as callback')
+parser.add_argument('-v','--visualize', action='store_true', help='set true to run tf-explain as callback')
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
 
@@ -43,7 +43,7 @@ else:
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout, GaussianNoise, Concatenate
+from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout, GaussianNoise, Concatenate, Conv2D, MaxPooling2D
 from tensorflow.keras.models import Model, load_model, Sequential
 
 from tensorflow.keras.utils import to_categorical
@@ -92,23 +92,34 @@ else:
     log.info('Model does not exist yet, creating a new one')
     baseModel = modelFunc(weights='imagenet', include_top=False, input_shape=IMG_DIMENSIONS_3D,input_tensor=Input(shape=IMG_DIMENSIONS_3D))
     baseModel.trainable = False
-    baseModel.summary()
+    #baseModel.summary()
 
     log.info(f'baseModel: {args["model"]}')
     # construct head of model that will be placed on top of the base model
     # denke unser headmodel ist zu klein für 3 klassen, sollten hier noch ein wenig herumprobieren
 
+
+    x = AveragePooling2D(pool_size=(4,4))(baseModel.output)
+    x = Flatten()(x)
+    x = Dense(64,activation='relu')(x)
+    x = Dropout(0.5)(x)
+    x = Dense(3,activation='softmax')(x)
+
+    model = Model(inputs=baseModel.input, outputs=x)
+    model.summary()
+    '''
     model = Sequential([
         baseModel,
-        AveragePooling2D(name='pool_test', pool_size=(4, 4)),
-        Flatten(name='flatten1'),
-        Dense(128, activation='relu'),
-        Dense(64, activation='relu'),
-        Dropout(0.5),
-        Dense(3, activation='softmax')
+        AveragePooling2D(name='pool_head', pool_size=(4, 4)),
+        Conv2D(128, 3, padding='same', activation='relu'),
+        MaxPooling2D(),
+        #Conv2D(128, 3, padding='same', activation='relu'),
+        #MaxPooling2D(pool_size=(3,3)),
+        Flatten(name='flatten1_head'),
+        Dense(128, name='dense_relu_head', activation='relu'),
+        Dense(3, name='output_softmax_head',activation='softmax')
     ])
-
-    model.summary()
+    '''
 
     trainEpochs = args['epochs']
     trainedEpochs = 0
@@ -142,14 +153,15 @@ try:
         validation_data=(valX, valY),
         class_index=0,
         output_dir="visualized",
-        layer_name='flatten1' # mmh
+        layer_name='Conv_1' # mmh
         )
     callback_modelcheckpoint = ModelCheckpoint(
             filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
             monitor='val_loss',
             save_weights_only=True,
             save_best_only=True,
-            #period=3,
+            period=5,
+            #save_freq=5,
         )
     callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween model should be saved!
             test_data=testData,
@@ -160,8 +172,9 @@ try:
             #period=5
         )
 
-    callbacks = [callback_modelcheckpoint,
-                 callback_evaluation]
+    callbacks = [ #callback_modelcheckpoint,
+                 #callback_evaluation
+    ]
     if args['visualize']: callbacks.append(callback_gradcam)
 
     model.fit(
