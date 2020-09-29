@@ -29,6 +29,7 @@ def check_if_trained_or_exit(train_epochs, requested_epochs):
 
 def load_existing_model(model_name, model_data_path, epochs):
     log.info('Model exists!')
+    log.info(f'If you want to train the model from the beginning, remove the models/{model_name}/ folder')
     modelData = pd.read_csv(model_data_path, index_col=0)
     trainedEpochs = len(modelData)
     trainEpochs = epochs - trainedEpochs
