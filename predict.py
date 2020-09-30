@@ -70,7 +70,7 @@ number_of_models = len(models)
 # evtl abfangen falls nicht bilddateien in diesem pfad liegen?
 data = []
 imageList = glob(path.join(args['dataset'], '*'))
-imageList = imageList[0:500] # TODO: remove this, just for development purposes
+#imageList = imageList[0:500] # TODO: remove this, just for development purposes
 for file in imageList:
     image = imread(file)
     image = cvtColor(image, COLOR_BGR2RGB)
@@ -97,6 +97,7 @@ log.info('predictions have been calculated')
 # save prediction to output file
 fileNames = [path.basename(file) for file in imageList]
 outputDict = {'File': fileNames}
+
 
 
 

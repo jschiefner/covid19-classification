@@ -2,21 +2,24 @@
 
 from argparse import ArgumentParser
 from os import path, mkdir, environ
+
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 from utils.management import *
 from utils.constants import *
 from utils.base_models import *
 
-
+# g
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
-parser.add_argument('-v','--visualize', action='store_true', help='set true to run tf-explain as callback')
+parser.add_argument('-v','--visualize', action='store_true', help='set to run tf-explain as callback')
 parser.add_argument('--evaluate', default=0,type=int, help='set to evaluate the network after every x epochs')
 parser.add_argument('-s','--save',default=0, type=int, help='unreliable computer, save current state after every x epochs')
-
+parser.add_argument('-a','--autostop', action='store_true', help='set to stop training when val_loss rises')
+parser.add_argument("-o", "--outputmodel", default="", help=f"specify optional network output name ")
 args = vars(parser.parse_args())
+if args['outputmodel']=="": args['outputmodel']=args['model']
 
 # metadata check
 check_if_exists_or_exit(args['dataset'])
@@ -30,7 +33,7 @@ if modelFunc is None:
         exit(1)
 
 check_and_create_folder('models')
-modelFolderPath = path.join('models', args['model'])
+modelFolderPath = path.join('models', args['outputmodel'])
 modelDataPath = path.join(modelFolderPath, 'data.csv')
 modelLogPath = path.join(modelFolderPath, 'training.log')
 modelCheckpointsPath = path.join(modelFolderPath, 'checkpoints')
@@ -49,7 +52,7 @@ from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dro
 from tensorflow.keras.models import Model, load_model, Sequential
 
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
@@ -94,7 +97,7 @@ else:
     log.info('Model does not exist yet, creating a new one')
     baseModel = modelFunc(weights='imagenet', include_top=False, input_shape=IMG_DIMENSIONS_3D,input_tensor=Input(shape=IMG_DIMENSIONS_3D))
     baseModel.trainable = False
-    baseModel.summary()
+    #baseModel.summary()
 
     log.info(f'baseModel: {args["model"]}')
     # construct head of model that will be placed on top of the base model
@@ -107,25 +110,29 @@ else:
     # x = Dense(3, activation='softmax', name='predictions')(x)
 
     # # vgg16 top slighty changed
+    ## x = Conv2D(128, 3, padding='same',name='conv_gradcam', activation='relu')(baseModel.output)# test
     x = GlobalAveragePooling2D()(baseModel.output)
+    #x = Dropout(0.3)(x)
     # x = Flatten(name='flatten')(baseModel.output)
-    x = Dense(128, activation='relu', name='fc1')(x)
-    x = Dense(4*3, activation='relu', name='fc2')(x)
+    x = Dense(256, activation='relu', name='fc1')(x)
+    x = Dropout(0.3)(x)
+    x = Dense(128, activation='relu', name='fc2')(x)
+    x = Dropout(0.5)(x)
     x = Dense(3, activation='softmax', name='predictions')(x)
 
-    #alternative 2
-    #x= Conv2D(128, 3, padding='same', activation='relu')(baseModel.output)
-    x = GlobalAveragePooling2D()(baseModel.output)
-    x = Dropout(0.3)(x)
-    #x = AveragePooling2D(pool_size=(4,4))(x)
-    #x = Dense(64, activation='relu')(x)
-    #x = Flatten()(x)
-    x = Dense(128, activation='relu')(x)
-    x = Dropout(0.5)(x)
-    x = Dense(3,activation='softmax')(x)
+    # #alternative 2
+    # #x= Conv2D(128, 3, padding='same', activation='relu')(baseModel.output)
+    # x = GlobalAveragePooling2D()(baseModel.output)
+    # x = Dropout(0.3)(x)
+    # #x = AveragePooling2D(pool_size=(4,4))(x)
+    # #x = Dense(64, activation='relu')(x)
+    # #x = Flatten()(x)
+    # x = Dense(128, activation='relu')(x)
+    # x = Dropout(0.5)(x)
+    # x = Dense(3,activation='softmax')(x)
 
     model = Model(inputs=baseModel.input, outputs=x)
-    model.summary()
+    #model.summary()
     '''
     model = Sequential([
         baseModel,
@@ -148,7 +155,7 @@ check_if_trained_or_exit(trainEpochs, args['epochs'])
 
 # %% prepare data
 
-trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'])
+trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'],validation_after_train_split=0.1)
 
 # %% train model
 
@@ -187,12 +194,15 @@ callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween mo
         trained_epochs=trainedEpochs,
         freq=args['evaluate']
     )
+callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=1)
+
+
 
 callbacks = []
 if args['visualize']: callbacks.append(callback_gradcam)
 if args['evaluate']>0: callbacks.append(callback_evaluation)
 if args['save']>0: callbacks.append(callback_modelcheckpoint)
-
+if args['autostop']: callbacks.append(callback_earlyStopping)
 
 
 # train network head, H not needed for now
