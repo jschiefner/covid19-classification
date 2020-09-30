@@ -73,10 +73,9 @@ def prevalence_count(labels):
         count[np.argmax(lab)] += 1
     return f"{count} with {class_specifier()}"
 
-def class_specifier():
+def class_specifier(): # relikt i guess
     lb = LabelBinarizer()
     lb.fit(CLASSES)
     a = np.array([[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]])
     b = lb.inverse_transform(a)
-    print(b)
     return b

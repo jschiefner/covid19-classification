@@ -111,7 +111,7 @@ else:
 
     # # vgg16 top slighty changed
     ## x = Conv2D(128, 3, padding='same',name='conv_gradcam', activation='relu')(baseModel.output)# test
-    x = GlobalAveragePooling2D()(baseModel.output)
+    x = GlobalAveragePooling2D(name='global_avg_pool2d')(baseModel.output)
     #x = Dropout(0.3)(x)
     # x = Flatten(name='flatten')(baseModel.output)
     x = Dense(256, activation='relu', name='fc1')(x)
@@ -172,12 +172,17 @@ model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
 
 # setup callbacks
+
+for layer in model.layers:
+    if "conv" in layer.name.lower():
+        gradcam_layer=layer.name
 from tf_explain.callbacks.grad_cam import GradCAMCallback
+
 callback_gradcam = GradCAMCallback(  # möglich als callback aber denke extern reicht auch
-        validation_data=(valX, valY),
+        validation_data=(valX[:25], valY[:25]), # put limit
         class_index=0,
         output_dir="visualized",
-        layer_name='Conv_1' # mmh
+        layer_name=gradcam_layer # mmh
         )
 callback_modelcheckpoint = ModelCheckpoint(
         filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',

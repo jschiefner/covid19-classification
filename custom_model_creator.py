@@ -55,6 +55,8 @@ INIT_LR = 1e-3
 BS = 8
 epochs=10
 
+
+
 # build model
 model = models.Sequential()
 model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=IMG_DIMENSIONS_3D))

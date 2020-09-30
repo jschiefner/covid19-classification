@@ -16,11 +16,9 @@ args = vars(parser.parse_args())
 # Load pretrained model or your own
 model = load_model(args['model'])
 
-last_conv_layer = 'Conv_1'
 for layer in model.layers:
-    if 'conv' in layer.name.lower():
-        last_conv_layer=layer.name
-        print(last_conv_layer)
+    if "conv" in layer.name.lower():
+        gradcam_layer=layer.name
 
 explainer = tf_explain.core.grad_cam.GradCAM()
 
@@ -65,9 +63,9 @@ for f in files:
 
 data = (imgdata, None)
 # Start explainer
-grid = explainer.explain(data, model,class_index=0, layer_name=last_conv_layer)  #
-explainer.save(grid, "visualized", f"grad_cam_corona_vgg_detected.jpg")
-print(f"GradCam image created and saved: {f}")
+grid = explainer.explain(data, model,class_index=0, layer_name=gradcam_layer)  #
+explainer.save(grid, "visualized", f"grad_cam_corona_30_09.jpg")
+print(f"GradCam image created and saved: ")
 
 
 
