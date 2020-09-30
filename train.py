@@ -13,8 +13,10 @@ parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
 parser.add_argument('-v','--visualize', action='store_true', help='set true to run tf-explain as callback')
+parser.add_argument('--evaluate', default=0,type=int, help='set to evaluate the network after every x epochs')
+parser.add_argument('-s','--save',default=0, type=int, help='unreliable computer, save current state after every x epochs')
+
 args = vars(parser.parse_args())
-# args = {'dataset': '.', 'model': 'VGG16', 'epochs': 25} # TODO: comment out
 
 # metadata check
 check_if_exists_or_exit(args['dataset'])
@@ -43,7 +45,7 @@ else:
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout, GaussianNoise, Concatenate, Conv2D, MaxPooling2D
+from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout, GaussianNoise, Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D
 from tensorflow.keras.models import Model, load_model, Sequential
 
 from tensorflow.keras.utils import to_categorical
@@ -92,16 +94,33 @@ else:
     log.info('Model does not exist yet, creating a new one')
     baseModel = modelFunc(weights='imagenet', include_top=False, input_shape=IMG_DIMENSIONS_3D,input_tensor=Input(shape=IMG_DIMENSIONS_3D))
     baseModel.trainable = False
-    #baseModel.summary()
+    baseModel.summary()
 
     log.info(f'baseModel: {args["model"]}')
     # construct head of model that will be placed on top of the base model
     # denke unser headmodel ist zu klein für 3 klassen, sollten hier noch ein wenig herumprobieren
 
+    # # vgg16 top [bad af]
+    # x = Flatten(name='flatten')(baseModel.output)
+    # x = Dense(128, activation='relu', name='fc1')(x)
+    # x = Dense(4*3, activation='relu', name='fc2')(x)
+    # x = Dense(3, activation='softmax', name='predictions')(x)
 
-    x = AveragePooling2D(pool_size=(4,4))(baseModel.output)
-    x = Flatten()(x)
-    x = Dense(64,activation='relu')(x)
+    # # vgg16 top slighty changed
+    x = GlobalAveragePooling2D()(baseModel.output)
+    # x = Flatten(name='flatten')(baseModel.output)
+    x = Dense(128, activation='relu', name='fc1')(x)
+    x = Dense(4*3, activation='relu', name='fc2')(x)
+    x = Dense(3, activation='softmax', name='predictions')(x)
+
+    #alternative 2
+    #x= Conv2D(128, 3, padding='same', activation='relu')(baseModel.output)
+    x = GlobalAveragePooling2D()(baseModel.output)
+    x = Dropout(0.3)(x)
+    #x = AveragePooling2D(pool_size=(4,4))(x)
+    #x = Dense(64, activation='relu')(x)
+    #x = Flatten()(x)
+    x = Dense(128, activation='relu')(x)
     x = Dropout(0.5)(x)
     x = Dense(3,activation='softmax')(x)
 
@@ -144,39 +163,41 @@ trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
-from tf_explain.callbacks.grad_cam import GradCAMCallback
 
-# train network head, H not needed for now
-# holds useful information about training progress
-try:
-    callback_gradcam = GradCAMCallback(  # möglich als callback aber denke extern reicht auch
+# setup callbacks
+from tf_explain.callbacks.grad_cam import GradCAMCallback
+callback_gradcam = GradCAMCallback(  # möglich als callback aber denke extern reicht auch
         validation_data=(valX, valY),
         class_index=0,
         output_dir="visualized",
         layer_name='Conv_1' # mmh
         )
-    callback_modelcheckpoint = ModelCheckpoint(
-            filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
-            monitor='val_loss',
-            save_weights_only=True,
-            save_best_only=True,
-            period=5,
-            #save_freq=5,
-        )
-    callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween model should be saved!
-            test_data=testData,
-            test_labels=testLabels,
-            batch_size=BS,
-            model_name=args['model'],
-            trained_epochs=trainedEpochs,
-            #period=5
-        )
+callback_modelcheckpoint = ModelCheckpoint(
+        filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
+        monitor='val_loss',
+        save_weights_only=True,
+        save_best_only=True,
+        period=args['save'],
+    )
+callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween model should be saved!
+        test_data=testData,
+        test_labels=testLabels,
+        batch_size=BS,
+        model_name=args['model'],
+        trained_epochs=trainedEpochs,
+        freq=args['evaluate']
+    )
 
-    callbacks = [ #callback_modelcheckpoint,
-                 #callback_evaluation
-    ]
-    if args['visualize']: callbacks.append(callback_gradcam)
+callbacks = []
+if args['visualize']: callbacks.append(callback_gradcam)
+if args['evaluate']>0: callbacks.append(callback_evaluation)
+if args['save']>0: callbacks.append(callback_modelcheckpoint)
 
+
+
+# train network head, H not needed for now
+# holds useful information about training progress
+try:
     model.fit(
         trainAug.flow(trainX, trainY, batch_size=BS),
         steps_per_epoch=len(trainX) // BS,

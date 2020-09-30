@@ -6,17 +6,18 @@ from sklearn.metrics import confusion_matrix
 from os import path, remove
 
 class EvaluationCallback(Callback):
-    def __init__(self, test_data, test_labels, batch_size, model_name, trained_epochs):
+    def __init__(self, test_data, test_labels, batch_size, model_name, trained_epochs, freq=1):
         super().__init__()
         self._testData = test_data
         self._testLabels = test_labels
         self._BS = batch_size
         self._modelName = model_name
         self._epoch = trained_epochs
+        self._freq = freq
 
     def on_epoch_end(self, _epoch, logs=None):
         self._epoch += 1 # increment epoch counter, ignore epoch passed by tensorflow
-        # if self._epoch % 5 != 0: return # TODO?: early return, only proceed every 5 epochs
+        if self._epoch % self._freq != 0: return # TODO?: early return, only proceed every 5 epochs
         print('')
         log.info(f'Intermediate network evaluation at epoch: {self._epoch}')
 

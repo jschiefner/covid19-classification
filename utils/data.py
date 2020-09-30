@@ -71,4 +71,12 @@ def prevalence_count(labels):
     count = [0 for _ in range(len(CLASSES))]
     for lab in labels:
         count[np.argmax(lab)] += 1
-    return count
+    return f"{count} with {class_specifier()}"
+
+def class_specifier():
+    lb = LabelBinarizer()
+    lb.fit(CLASSES)
+    a = np.array([[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]])
+    b = lb.inverse_transform(a)
+    print(b)
+    return b
