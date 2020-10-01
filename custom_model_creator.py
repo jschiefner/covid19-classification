@@ -37,15 +37,6 @@ if check_and_create_folder(modelFolderPath):
     print(f'The model "{args["modelName"]}" already exists. Please choose another name')
     exit(1)
 
-log.basicConfig(
-    level=log.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        log.FileHandler(path.join(modelFolderPath, 'training.log')),
-        log.StreamHandler(stdout)
-    ]
-)
-
 check_and_create_folder('models') # make sure model directory exists
 printSeparator()
 
@@ -53,9 +44,7 @@ printSeparator()
 
 INIT_LR = 1e-3
 BS = 8
-epochs=10
-
-
+epochs = 10
 
 # build model
 model = models.Sequential()
@@ -70,6 +59,7 @@ model.add(layers.Flatten())
 model.add(layers.Dense(64, activation='relu'))
 model.add(layers.Dropout(0.50))
 model.add(layers.Dense(3, activation="sigmoid"))
+
 model.summary() # prints model summary
 
 optimizer = Adam(lr=INIT_LR, decay=INIT_LR / epochs)
@@ -83,7 +73,7 @@ model.compile(
 
 modelPath = path.join(modelFolderPath, f'epoch_none.h5')
 csvPath = path.join(modelFolderPath, 'data.csv')
-log.info(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
+print(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
 model.save(modelPath, save_format='h5')
 df = pd.DataFrame({'loss':[],'accuracy':[],'val_loss':[],'val_accuracy':[]})  # ,loss,accuracy,val_loss,val_accuracy
 df.to_csv(csvPath)
