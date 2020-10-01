@@ -104,6 +104,7 @@ else:
 
 
     # # vgg16 top slighty changed
+    ## x = Conv2D(128, 3, padding='same',name='conv_gradcam', activation='relu')(baseModel.output)# test
     x = GlobalAveragePooling2D(name='global_avg_pool2d')(baseModel.output)
     #x = Dropout(0.3)(x)
     # x = Flatten(name='flatten')(baseModel.output)
@@ -163,11 +164,14 @@ else:
     trainedEpochs = 0
     log.info(f'trainEpochs: {trainEpochs}')
 
+log.info('Model Overview:')
+model.summary()
+
 check_if_trained_or_exit(trainEpochs, args['epochs'])
 
 # %% prepare data
 
-trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'],validation_after_train_split=0.3)
+trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'], validation_after_train_split=0.1)
 
 # %% train model
 
@@ -219,7 +223,6 @@ if args['visualize']!=0: callbacks.append(callback_gradcam)
 if args['evaluate']>0: callbacks.append(callback_evaluation)
 if args['save']>0: callbacks.append(callback_modelcheckpoint)
 if args['autostop']: callbacks.append(callback_earlyStopping)
-
 
 # train network head, H not needed for now
 # holds useful information about training progress
