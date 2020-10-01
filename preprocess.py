@@ -10,7 +10,7 @@ from progress.bar import Bar
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument('-o', '--outputfolder', default='augmented_images', help='path to output folder')
-parser.add_argument('-c', '--count', default=10, type=int, help='number of random augmentations for each image')
+parser.add_argument('-c', '--count', default=3, type=int, help='number of random augmentations for each image')
 args = vars(parser.parse_args())
 
 # Subject to change
@@ -40,7 +40,7 @@ with Bar('Processing images', max=len(metadata)) as bar:
         count = 0
         maxCount = args['count'] * 20 if row.Covid else args['count']
         for batch in datagen.flow(img, batch_size=1, save_to_dir=imagesOutPath,
-                                  save_prefix=row.File, save_format='jpeg'):
+                                  save_prefix=row.File, save_format='jpg'):
             count += 1
             if count >= maxCount:
                 break  # otherwise the generator would loop indefinitely

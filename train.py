@@ -111,8 +111,8 @@ else:
 
 
     model = Model(inputs=baseModel.input, outputs=x)
-    #model.summary()
-
+    model.summary()
+    #exit(0)
 
     trainEpochs = args['epochs']
     trainedEpochs = 0
@@ -152,7 +152,7 @@ callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestätigtem corona nehm
         class_index=0,
         output_dir=path.join(modelFolderPath,"visualized"),
         limit=args['visualize'],
-        trainEpochs=trainedEpochs,
+        trained_epochs=trainedEpochs,
         )
 callback_modelcheckpoint = ModelCheckpoint(
         filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
