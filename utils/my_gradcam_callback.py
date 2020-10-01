@@ -24,6 +24,7 @@ class MyGradCAMCallback(Callback):
         self,
         validation_data,
         class_index,
+        trained_epochs,
         output_dir=Path("./logs/grad_cam"),
         use_guided_grads=True,
         limit=-1,
@@ -93,4 +94,4 @@ class MyGradCAMCallback(Callback):
             #use_guided_grads=self.use_guided_grads,
         )
 
-        explainer.save(heatmap, self.output_dir, f"epoch_{self._epoch}_limit_{self.limit}.jpg") # TODO epochen werden immer von 0 neu angefangen zu zählen!!
+        explainer.save(heatmap, self.output_dir, f"epoch_{self._epoch}_limit_{self.limit}.jpg") # TODO epochen werden immer von 0 neu angefangen zu zaehlen!!

@@ -147,12 +147,12 @@ model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 from utils.my_gradcam_callback import MyGradCAMCallback
 
 #
-callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestätigtem corona nehmen?
+callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestaetigtem corona nehmen?
         validation_data=(valX, valY),
         class_index=0,
+        trained_epochs=trainedEpochs,
         output_dir=path.join(modelFolderPath,"visualized"),
         limit=args['visualize'],
-        trainEpochs=trainedEpochs,
         )
 callback_modelcheckpoint = ModelCheckpoint(
         filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
