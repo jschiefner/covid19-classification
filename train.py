@@ -8,7 +8,7 @@ from utils.management import *
 from utils.constants import *
 from utils.base_models import *
 
-# g
+# example: python train.py dataset -m "MobileNetV2" -e 10 --evaluate 1 -v
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
@@ -17,9 +17,7 @@ parser.add_argument('-v','--visualize', action='store_true', help='set to run tf
 parser.add_argument('--evaluate', default=0,type=int, help='set to evaluate the network after every x epochs')
 parser.add_argument('-s','--save',default=0, type=int, help='unreliable computer, save current state after every x epochs')
 parser.add_argument('-a','--autostop', action='store_true', help='set to stop training when val_loss rises')
-parser.add_argument("-o", "--outputmodel", default="", help=f"specify optional network output name ")
 args = vars(parser.parse_args())
-if args['outputmodel']=="": args['outputmodel']=args['model']
 
 # metadata check
 check_if_exists_or_exit(args['dataset'])
@@ -33,7 +31,7 @@ if modelFunc is None:
         exit(1)
 
 check_and_create_folder('models')
-modelFolderPath = path.join('models', args['outputmodel'])
+modelFolderPath = path.join('models', args['model'])
 modelDataPath = path.join(modelFolderPath, 'data.csv')
 modelLogPath = path.join(modelFolderPath, 'training.log')
 modelCheckpointsPath = path.join(modelFolderPath, 'checkpoints')
@@ -173,16 +171,15 @@ model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
 # setup callbacks
 
-for layer in model.layers:
-    if "conv" in layer.name.lower():
-        gradcam_layer=layer.name
-from tf_explain.callbacks.grad_cam import GradCAMCallback
 
-callback_gradcam = GradCAMCallback(  # möglich als callback aber denke extern reicht auch
-        validation_data=(valX[:25], valY[:25]), # put limit
+from utils.my_gradcam_callback import MyGradCAMCallback
+
+#
+callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestätigtem corona nehmen?
+        validation_data=(valX, valY),
         class_index=0,
-        output_dir="visualized",
-        layer_name=gradcam_layer # mmh
+        output_dir=path.join(modelFolderPath,"visualized"),
+        limit=25,
         )
 callback_modelcheckpoint = ModelCheckpoint(
         filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
