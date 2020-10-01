@@ -4,7 +4,7 @@ Callback Module for Grad CAM
 """
 from datetime import datetime
 from pathlib import Path
-
+import random
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import Callback
@@ -45,6 +45,8 @@ class MyGradCAMCallback(Callback):
         self.output_dir = output_dir
         self.use_guided_grads = use_guided_grads
         self.limit = limit
+        self.val_data=None
+        self.val_data_y=None
         Path.mkdir(Path(self.output_dir), parents=True, exist_ok=True)
 
     def get_layer_name(self):
@@ -53,6 +55,22 @@ class MyGradCAMCallback(Callback):
             if "conv" in layer.name.lower():
                 gradcam_layer = layer.name
         return gradcam_layer
+
+    def get_val_data(self):
+        if self.val_data is None:
+            n = len(self.validation_data[1])
+            ii = random.sample(range(0,n),self.limit)
+            valx = []
+            valy = []
+            for i in ii:
+                valx.append(self.validation_data[0][i])
+                valy.append(self.validation_data[1][i])
+            self.val_data=(valx,valy)
+        return self.val_data
+        # if self.val_data is None:
+        #     self.val_data = (self.validation_data[0][:self.limit],self.validation_data[1][:self.limit])
+        # return self.val_data
+
 
 
     def on_epoch_end(self, epoch, logs=None):
@@ -66,11 +84,12 @@ class MyGradCAMCallback(Callback):
             self.layer_name = self.get_layer_name()
         explainer = GradCAM()
         heatmap = explainer.explain(
-            (self.validation_data[0][:self.limit],self.validation_data[1][:self.limit]),
+            #(self.validation_data[0][:self.limit],self.validation_data[1][:self.limit]),
+            self.validation_data if self.limit<0 else self.get_val_data(),
             self.model,
             class_index=self.class_index,
             layer_name=self.layer_name,
             #use_guided_grads=self.use_guided_grads,
         )
 
-        explainer.save(heatmap, self.output_dir, f"epoch_{epoch}_limit_{self.limit}.jpg")
+        explainer.save(heatmap, self.output_dir, f"epoch_{epoch}_limit_{self.limit}.jpg") # TODO epochen werden immer von 0 neu angefangen zu zählen!!

@@ -13,7 +13,7 @@ parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
-parser.add_argument('-v','--visualize', action='store_true', help='set to run tf-explain as callback')
+parser.add_argument('-v','--visualize',type=int, default=16, help='set to run tf-explain as callback, set 0 to deactivate, pos. value take x images, neg. value use all images')
 parser.add_argument('--evaluate', default=0,type=int, help='set to evaluate the network after every x epochs')
 parser.add_argument('-s','--save',default=0, type=int, help='unreliable computer, save current state after every x epochs')
 parser.add_argument('-a','--autostop', action='store_true', help='set to stop training when val_loss rises')
@@ -101,14 +101,9 @@ else:
     # construct head of model that will be placed on top of the base model
     # denke unser headmodel ist zu klein für 3 klassen, sollten hier noch ein wenig herumprobieren
 
-    # # vgg16 top [bad af]
-    # x = Flatten(name='flatten')(baseModel.output)
-    # x = Dense(128, activation='relu', name='fc1')(x)
-    # x = Dense(4*3, activation='relu', name='fc2')(x)
-    # x = Dense(3, activation='softmax', name='predictions')(x)
+
 
     # # vgg16 top slighty changed
-    ## x = Conv2D(128, 3, padding='same',name='conv_gradcam', activation='relu')(baseModel.output)# test
     x = GlobalAveragePooling2D(name='global_avg_pool2d')(baseModel.output)
     #x = Dropout(0.3)(x)
     # x = Flatten(name='flatten')(baseModel.output)
@@ -117,6 +112,25 @@ else:
     x = Dense(128, activation='relu', name='fc2')(x)
     x = Dropout(0.5)(x)
     x = Dense(3, activation='softmax', name='predictions')(x)
+
+
+    # # pyimagesearch variante
+    # model = baseModel.output
+    # model = AveragePooling2D(pool_size=(4, 4))(model)
+    # model = Flatten(name="flatten")(model)
+    # model = Dense(64, activation="relu")(model)
+    # model = Dropout(0.5)(model)
+    # model = Dense(3, activation="softmax")(model)
+
+    # # pyimagesearch variante geändert
+    # model = baseModel.output
+    # model = AveragePooling2D(pool_size=(4, 4))(model)
+    # model = Flatten(name="flatten")(model)
+    # model = Dense(128, activation="relu")(model)
+    # model = Dense(64, activation="relu")(model)
+    # model = Dropout(0.5)(model)
+    # model = Dense(3, activation="softmax")(model)
+
 
     # #alternative 2
     # #x= Conv2D(128, 3, padding='same', activation='relu')(baseModel.output)
@@ -153,7 +167,7 @@ check_if_trained_or_exit(trainEpochs, args['epochs'])
 
 # %% prepare data
 
-trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'],validation_after_train_split=0.1)
+trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'],validation_after_train_split=0.3)
 
 # %% train model
 
@@ -179,7 +193,7 @@ callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestätigtem corona nehm
         validation_data=(valX, valY),
         class_index=0,
         output_dir=path.join(modelFolderPath,"visualized"),
-        limit=25,
+        limit=args['visualize'],
         )
 callback_modelcheckpoint = ModelCheckpoint(
         filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
@@ -201,7 +215,7 @@ callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=1)
 
 
 callbacks = []
-if args['visualize']: callbacks.append(callback_gradcam)
+if args['visualize']!=0: callbacks.append(callback_gradcam)
 if args['evaluate']>0: callbacks.append(callback_evaluation)
 if args['save']>0: callbacks.append(callback_modelcheckpoint)
 if args['autostop']: callbacks.append(callback_earlyStopping)
