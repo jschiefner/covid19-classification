@@ -46,7 +46,7 @@ class MyGradCAMCallback(Callback):
         self.use_guided_grads = use_guided_grads
         self.limit = limit
         self.val_data=None
-        self.val_data_y=None
+        self._epoch = trained_epochs
         Path.mkdir(Path(self.output_dir), parents=True, exist_ok=True)
 
     def get_layer_name(self):
@@ -80,6 +80,7 @@ class MyGradCAMCallback(Callback):
             epoch (int): Epoch index
             logs (dict): Additional information on epoch
         """
+        self._epoch += 1
         if self.layer_name is None:
             self.layer_name = self.get_layer_name()
         explainer = GradCAM()
@@ -92,4 +93,4 @@ class MyGradCAMCallback(Callback):
             #use_guided_grads=self.use_guided_grads,
         )
 
-        explainer.save(heatmap, self.output_dir, f"epoch_{epoch}_limit_{self.limit}.jpg") # TODO epochen werden immer von 0 neu angefangen zu zählen!!
+        explainer.save(heatmap, self.output_dir, f"epoch_{self._epoch}_limit_{self.limit}.jpg") # TODO epochen werden immer von 0 neu angefangen zu zählen!!

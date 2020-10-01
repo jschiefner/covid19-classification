@@ -98,15 +98,10 @@ else:
     #baseModel.summary()
 
     log.info(f'baseModel: {args["model"]}')
-    # construct head of model that will be placed on top of the base model
-    # denke unser headmodel ist zu klein für 3 klassen, sollten hier noch ein wenig herumprobieren
 
-
-
-    # # vgg16 top slighty changed
+    # # vgg16 top adapted
     ## x = Conv2D(128, 3, padding='same',name='conv_gradcam', activation='relu')(baseModel.output)# test
     x = GlobalAveragePooling2D(name='global_avg_pool2d')(baseModel.output)
-    #x = Dropout(0.3)(x)
     # x = Flatten(name='flatten')(baseModel.output)
     x = Dense(256, activation='relu', name='fc1')(x)
     x = Dropout(0.3)(x)
@@ -115,50 +110,9 @@ else:
     x = Dense(3, activation='softmax', name='predictions')(x)
 
 
-    # # pyimagesearch variante
-    # model = baseModel.output
-    # model = AveragePooling2D(pool_size=(4, 4))(model)
-    # model = Flatten(name="flatten")(model)
-    # model = Dense(64, activation="relu")(model)
-    # model = Dropout(0.5)(model)
-    # model = Dense(3, activation="softmax")(model)
-
-    # # pyimagesearch variante geändert
-    # model = baseModel.output
-    # model = AveragePooling2D(pool_size=(4, 4))(model)
-    # model = Flatten(name="flatten")(model)
-    # model = Dense(128, activation="relu")(model)
-    # model = Dense(64, activation="relu")(model)
-    # model = Dropout(0.5)(model)
-    # model = Dense(3, activation="softmax")(model)
-
-
-    # #alternative 2
-    # #x= Conv2D(128, 3, padding='same', activation='relu')(baseModel.output)
-    # x = GlobalAveragePooling2D()(baseModel.output)
-    # x = Dropout(0.3)(x)
-    # #x = AveragePooling2D(pool_size=(4,4))(x)
-    # #x = Dense(64, activation='relu')(x)
-    # #x = Flatten()(x)
-    # x = Dense(128, activation='relu')(x)
-    # x = Dropout(0.5)(x)
-    # x = Dense(3,activation='softmax')(x)
-
     model = Model(inputs=baseModel.input, outputs=x)
     #model.summary()
-    '''
-    model = Sequential([
-        baseModel,
-        AveragePooling2D(name='pool_head', pool_size=(4, 4)),
-        Conv2D(128, 3, padding='same', activation='relu'),
-        MaxPooling2D(),
-        #Conv2D(128, 3, padding='same', activation='relu'),
-        #MaxPooling2D(pool_size=(3,3)),
-        Flatten(name='flatten1_head'),
-        Dense(128, name='dense_relu_head', activation='relu'),
-        Dense(3, name='output_softmax_head',activation='softmax')
-    ])
-    '''
+
 
     trainEpochs = args['epochs']
     trainedEpochs = 0
@@ -198,6 +152,7 @@ callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestätigtem corona nehm
         class_index=0,
         output_dir=path.join(modelFolderPath,"visualized"),
         limit=args['visualize'],
+        trainEpochs=trainedEpochs,
         )
 callback_modelcheckpoint = ModelCheckpoint(
         filepath=f'models/{args["model"]}/checkpoints/checkpoint_epoch{trainedEpochs}' + '+{epoch}' + '_ckpt-loss={loss:.2f}.h5',
