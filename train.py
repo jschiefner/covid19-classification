@@ -130,7 +130,6 @@ else:
     # x = Dense(3,activation='softmax')(x)
 
     model = Model(inputs=baseModel.input, outputs=x)
-    #model.summary()
     '''
     model = Sequential([
         baseModel,
@@ -149,11 +148,14 @@ else:
     trainedEpochs = 0
     log.info(f'trainEpochs: {trainEpochs}')
 
+log.info('Model Overview:')
+model.summary()
+
 check_if_trained_or_exit(trainEpochs, args['epochs'])
 
 # %% prepare data
 
-trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'],validation_after_train_split=0.1)
+trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'], validation_after_train_split=0.1)
 
 # %% train model
 
@@ -168,13 +170,10 @@ trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
-
 # setup callbacks
-
 
 from utils.my_gradcam_callback import MyGradCAMCallback
 
-#
 callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestätigtem corona nehmen?
         validation_data=(valX, valY),
         class_index=0,
@@ -198,14 +197,11 @@ callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween mo
     )
 callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=1)
 
-
-
 callbacks = []
 if args['visualize']: callbacks.append(callback_gradcam)
 if args['evaluate']>0: callbacks.append(callback_evaluation)
 if args['save']>0: callbacks.append(callback_modelcheckpoint)
 if args['autostop']: callbacks.append(callback_earlyStopping)
-
 
 # train network head, H not needed for now
 # holds useful information about training progress
