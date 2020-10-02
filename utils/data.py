@@ -5,7 +5,7 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
 from os import path
-from utils.constants import CLASSES, IMG_DIMENSIONS
+from utils.constants import CLASSES, IMG_DIMENSIONS, BATCH_SIZE
 import logging as log
 from progress.bar import Bar
 
@@ -51,8 +51,10 @@ def load_dataset(datasetPath, validation_after_train_split=0.33):
     trainValidationData = data[:splitPoint]
     trainValidationLabels = labels[:splitPoint]
     # second chunk for the testing after training with fresh images
-    testData = data[splitPoint:]
-    testLabels = labels[splitPoint:]
+    testData, testLabels = make_dividable_by_batch_size(
+        data[splitPoint:], # x
+        labels[splitPoint:], # y
+    )
 
     log.info(f'train/validation label prevalence count: {prevalence_count(trainValidationLabels)}')
     log.info(f'test label prevalence count: {prevalence_count(testLabels)}')
@@ -64,8 +66,19 @@ def load_dataset(datasetPath, validation_after_train_split=0.33):
     # pass an int for reproducible output across multiple function calls. See Glossary.
     (trainX, valX, trainY, valY) = train_test_split(trainValidationData, trainValidationLabels, test_size=0.2,
                                                     stratify=trainValidationLabels)  # random_state=42
+    trainX, trainY = make_dividable_by_batch_size(trainX, trainY)
+    valX, valY = make_dividable_by_batch_size(valX, valY)
     log.info(f'selected {len(trainX)} images for training and {len(valX)} images for validation (during training)')
     return trainX, valX, trainY, valY, testData, testLabels
+
+def make_dividable_by_batch_size(x, y):
+    assert len(x) == len(y)
+    rest = len(x) % BATCH_SIZE
+    if rest != 0:
+        log.info(f'Drop {rest} images to make dataset dividable by batch_size ({BATCH_SIZE})')
+        x, y = x[0:-rest], y[0:-rest]
+    assert len(x) % BATCH_SIZE == 0
+    return x, y
 
 def prevalence_count(labels):
     count = [0 for _ in range(len(CLASSES))]

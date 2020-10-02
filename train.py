@@ -85,10 +85,6 @@ log.info(f'Starting Training with arguments: {args}')
 
 # %% load model
 
-# initialize some training parameters
-INIT_LR = 1e-3
-BS = 8
-
 if modelExists:
     model, modelData, trainEpochs, trainedEpochs = load_existing_model(args['model'], modelDataPath, args['epochs'])
 else:
@@ -138,13 +134,10 @@ trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
-
 # setup callbacks
-
 
 from utils.my_gradcam_callback import MyGradCAMCallback
 
-#
 callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestaetigtem corona nehmen?
         validation_data=(valX, valY),
         class_index=0,
@@ -162,7 +155,7 @@ callback_modelcheckpoint = ModelCheckpoint(
 callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween model should be saved!
         test_data=testData,
         test_labels=testLabels,
-        batch_size=BS,
+        batch_size=BATCH_SIZE,
         model_name=args['model'],
         trained_epochs=trainedEpochs,
         freq=args['evaluate']
@@ -182,17 +175,17 @@ if args['autostop']: callbacks.append(callback_earlyStopping)
 # holds useful information about training progress
 try:
     model.fit(
-        trainAug.flow(trainX, trainY, batch_size=BS),
-        steps_per_epoch=len(trainX) // BS,
+        trainAug.flow(trainX, trainY, batch_size=BATCH_SIZE),
+        steps_per_epoch=len(trainX) // BATCH_SIZE,
         validation_data=(valX, valY),
-        validation_steps=len(valX) // BS,
+        validation_steps=len(valX) // BATCH_SIZE,
         epochs=trainEpochs,
         callbacks=callbacks,
     )
 except KeyboardInterrupt:
     print()
     log.info(f'interrupted Training at epoch: {len(model.history.epoch)+1}')
-    if len(model.history.epoch)==0:
+    if len(model.history.epoch) == 0:
         exit(0)
 
 # save history and epochs for later
@@ -202,7 +195,7 @@ epochs = len(model.history.epoch)
 
 # %% validate model
 
-predictions = np.argmax(model.predict(testData, batch_size=BS), axis=1)
+predictions = np.argmax(model.predict(testData, batch_size=BATCH_SIZE), axis=1)
 report = classification_report(testLabels.argmax(axis=1), predictions, target_names=CLASSES) # TODO: do we even need this?
 log.info(f'Evaluating trained network\n{report}')
 
