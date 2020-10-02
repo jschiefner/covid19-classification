@@ -109,10 +109,8 @@ else:
     x = Dropout(0.5)(x)
     x = Dense(3, activation='softmax', name='predictions')(x)
 
-
     model = Model(inputs=baseModel.input, outputs=x)
-    #model.summary()
-
+    # model.summary()
 
     trainEpochs = args['epochs']
     trainedEpochs = 0
@@ -169,9 +167,10 @@ callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween mo
         trained_epochs=trainedEpochs,
         freq=args['evaluate']
     )
-callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=1)
-
-
+callback_earlyStopping = EarlyStopping(
+    monitor='val_loss',
+    patience=1,
+)
 
 callbacks = []
 if args['visualize']!=0: callbacks.append(callback_gradcam)
