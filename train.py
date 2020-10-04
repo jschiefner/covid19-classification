@@ -95,7 +95,6 @@ else:
 
     model = Model(inputs=baseModel.input, outputs=x)
     model.summary()
-    exit(0)
     trainEpochs = args['epochs']
     trainedEpochs = 0
     log.info(f'trainEpochs: {trainEpochs}')
