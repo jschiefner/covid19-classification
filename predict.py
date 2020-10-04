@@ -1,6 +1,7 @@
 # %% imports
 
-from os import path, environ, listdir
+from os import path, environ
+
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 from argparse import ArgumentParser
 from glob import glob

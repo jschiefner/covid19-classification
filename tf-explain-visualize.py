@@ -1,18 +1,15 @@
-
-import tf_explain
-from tensorflow.keras.models import load_model
-import tensorflow as tf
-import sys
-from argparse import ArgumentParser
-import os
-import PIL
-import pandas as pd
-import numpy as np
-from os import path
-from progress.bar import Bar
-from utils.constants import CLASSES, IMG_DIMENSIONS
 import random
+from argparse import ArgumentParser
+from os import path
+
+import numpy as np
+import pandas as pd
+import tf_explain
 from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
+from progress.bar import Bar
+from tensorflow.keras.models import load_model
+
+from utils.constants import CLASSES, IMG_DIMENSIONS
 
 parser = ArgumentParser()
 parser.add_argument("model", help=f"specify model ")

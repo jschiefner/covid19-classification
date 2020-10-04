@@ -1,29 +1,9 @@
 # %% parse arguments
 
-from argparse import ArgumentParser
-from os import path, mkdir, environ
+from os import environ
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # make tensorflow less verbose
 
-import tensorflow as tf
 from tensorflow.keras import models, layers
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import Input, AveragePooling2D, Flatten, Dense, Dropout, GaussianNoise
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.callbacks import ModelCheckpoint
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
-from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
-from glob import glob
-import logging as log
-from sys import stdout
-import pandas as pd
-import numpy as np
-from utils.evaluation_callback import EvaluationCallback
-from utils.data import load_dataset
-from utils.constants import *
 from utils.management import *
 from utils.constants import *
 from argparse import ArgumentParser

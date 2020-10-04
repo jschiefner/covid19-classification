@@ -1,11 +1,13 @@
-from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
 from argparse import ArgumentParser
-from os import listdir, mkdir
-from os.path import exists, join, splitext
-import pandas as pd
-from utils.management import check_and_create_folder
+from os import listdir
+from os.path import join
+
 import numpy as np
+import pandas as pd
 from progress.bar import Bar
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
+
+from utils.management import check_and_create_folder
 
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')

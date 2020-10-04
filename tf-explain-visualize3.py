@@ -1,12 +1,12 @@
+import sys
+from os import path
+
+import numpy as np
 import tf_explain
 from tensorflow.keras.models import load_model
-import tensorflow as tf
-import sys
-import os
-import PIL
-from utils.constants import CLASSES, IMG_DIMENSIONS
-import numpy as np
-from os import path
+
+from utils.constants import IMG_DIMENSIONS
+
 # Load pretrained model or your own
 model = load_model(sys.argv[1])
 

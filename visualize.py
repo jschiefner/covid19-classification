@@ -2,9 +2,10 @@
 
 from argparse import ArgumentParser
 from os import path
-import pandas as pd
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 parser = ArgumentParser()
 parser.add_argument('-m', '--model', required=True, help='Model Name')

@@ -1,14 +1,9 @@
 # %% imports
 
-from os import path, environ, listdir
+from os import environ
+
 environ['TF_CPP_MIN_LOG_LEVEL'] = '1' # make tensorflow less verbose
 from argparse import ArgumentParser
-from glob import glob
-from tensorflow.keras.models import load_model
-import pandas as pd
-import numpy as np
-from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB
-import logging as log
 from sys import stdout
 import tensorflow as tf
 from utils.management import *

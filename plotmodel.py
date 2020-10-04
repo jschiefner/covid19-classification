@@ -1,8 +1,4 @@
-import keras
-from keras.datasets import mnist
-from keras.models import Sequential, load_model
-from keras.layers import Dense, Dropout, Flatten, GlobalAveragePooling2D
-from keras.layers import Conv2D, MaxPooling2D
+from keras.models import load_model
 from keras.utils.vis_utils import plot_model
 
 
