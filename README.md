@@ -6,7 +6,7 @@ We use Convolutional Neural Networks in Order to solve this. Instructions on how
 ## Participants
 
  - @cccastan
- - @TheNeedForSleep
+ - @TheNeedForSleep (t_rade)
  - @jschiefner
  
 ## Requirements
