@@ -34,7 +34,6 @@ parser.add_argument('dataset', help='folder containing images to predict')
 parser.add_argument('output', help='filepath where output file should be stored')
 parser.add_argument('-m', '--model', required=False, default='all', help='models to be used (uses all it can find by default), possible to specify multiple: -m "VGG16 MobileNetV22"')
 args = vars(parser.parse_args())
-# args = {'dataset': 'images', 'output': 'output.csv', 'model': 'VGG16 ResNet50'} # for development
 
 # verify dataset path
 if not path.isdir(args['dataset']):
@@ -66,12 +65,9 @@ for model in models:
 
 number_of_models = len(models)
 
-
 # %% load images
-# evtl abfangen falls nicht bilddateien in diesem pfad liegen?
 data = []
 imageList = glob(path.join(args['dataset'], '*'))
-#imageList = imageList[0:500] # TODO: remove this, just for development purposes
 for file in imageList:
     image = imread(file)
     image = cvtColor(image, COLOR_BGR2RGB)
@@ -99,31 +95,17 @@ log.info('predictions have been calculated')
 fileNames = [path.basename(file) for file in imageList]
 outputDict = {'File': fileNames}
 
-
-
-
-# diese ausgabe ist wenig nützlich
 for predictions, model in zip(predictionsList, models):
     outputDict[f'argmax [{model}]'] = [CLASSES[np.argmax(prediction)] for prediction in predictions]
-
-
-# TODO ensemble classikator
-
-# ensemble stuff here
-#if number_of_models > 1:
-#    temp = np.zeros(len(fileNames))
-#    for predictions, model in zip(predictionsList, models):
-#        temp += [(1 if np.argmax(prediction) == 0 else 0) for prediction in predictions] # 100% covid == [1,0,0]
-#    outputDict['Covid [Ensemble Majority]'] = [t*2 >= number_of_models for t in temp]
 
 # ensemble stuff here
 if number_of_models > 1:
     n = len(predictionsList[0])
     ensemble = []
     for i in range(n):
-        count = [0,0,0]
+        count = [0, 0, 0]
         for j in range(number_of_models):
-            count[np.argmax(predictionsList[j][i])]+=1
+            count[np.argmax(predictionsList[j][i])] += 1
 
         if count[0]>count[1] and count[0]>count[2]:
             ensemble.append(CLASSES[0])
@@ -134,21 +116,14 @@ if number_of_models > 1:
         else:
             ensemble.append("")
     outputDict['Covid [Ensemble Majority]'] = ensemble
-    #print(outputDict['Covid [Ensemble Majority]'])
     ensemble = []
     for i in range(n):
         s = 0.0
         for j in range(number_of_models):
-            s+=predictionsList[j][i][0]
-        s/=number_of_models
+            s += predictionsList[j][i][0]
+        s /= number_of_models
         ensemble.append(s)
     outputDict['Covid Ensemble'] = ensemble
-
-    #print(outputDict['Covid Ensemble'])
-
-
-
-
 
 for predictions, model in zip(predictionsList, models):
     outputDict[f'Covid (probability)[{model}]'] = predictions[:, 0]

@@ -48,6 +48,6 @@ modelPath = path.join(modelFolderPath, f'epoch_none.h5')
 csvPath = path.join(modelFolderPath, 'data.csv')
 print(f'saving model to: "{modelPath}", saving csv to: "{csvPath}"')
 model.save(modelPath, save_format='h5')
-df = pd.DataFrame({'loss':[],'accuracy':[],'val_loss':[],'val_accuracy':[]})  # ,loss,accuracy,val_loss,val_accuracy
+df = pd.DataFrame({'loss': [], 'accuracy': [], 'val_loss': [], 'val_accuracy': []})
 df.to_csv(csvPath)
 printSeparator()

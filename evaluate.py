@@ -36,7 +36,6 @@ parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument('-m', '--model', required=False, default='all', help='models to be used (uses all it can find by default), possible to specify multiple: -m "VGG16 MobileNetV22"')
 args = vars(parser.parse_args())
-# args = {'dataset': '.', 'output': 'output.csv', 'model': 'VGG16 ResNet50'} # for development
 
 # verify dataset path
 if not path.isdir(args['dataset']):
@@ -75,7 +74,6 @@ metadata = pd.read_csv(
     usecols=['File', 'No Finding', 'Covid'],
     dtype={'File': np.str, 'No Finding': np.bool, 'Covid': np.bool}
 )
-# metadata = metadata[1000:1100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
 data, labels = [], []
 dataLength = len(metadata)
 splitPoint = dataLength - int(dataLength * 0.1)
@@ -97,13 +95,10 @@ data = np.array(data) / 255.0
 labels = np.array(labels)
 log.info(f'successfully loaded {len(metadata)} images')
 
-log.info('encode labels')
-
-# one hot encoding labels
+log.info('encode labels') # one hot encoding labels
 lb = LabelBinarizer()
-lb.fit(CLASSES) # !!! changes order of classes: covid, other, healthy
+lb.fit(CLASSES) # changes order of classes: covid, other, healthy
 labels = lb.transform(labels)
-
 
 # %% run predictions models
 predictionsList = []

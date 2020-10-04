@@ -15,10 +15,9 @@ parser.add_argument('-o', '--outputfolder', default='augmented_images', help='pa
 parser.add_argument('-c', '--count', default=3, type=int, help='number of random augmentations for each image')
 args = vars(parser.parse_args())
 
-# Subject to change
 datagen = ImageDataGenerator(rotation_range=10,
-                             horizontal_flip=True,   # Das könnte blödsinnig sein
-                             fill_mode='nearest',    # Constant black fill instead?
+                             horizontal_flip=True,
+                             fill_mode='nearest',
                              width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
                              height_shift_range=0.2, # Vertikal tendenziell etwas schlechter
                              zoom_range=0.2)
@@ -29,7 +28,6 @@ check_and_create_folder(imagesOutPath)
 
 print('Augmenting...')
 metadata = pd.read_csv(join(args['dataset'], 'metadata.csv'))
-
 outdata = pd.DataFrame(columns=metadata.columns)
 
 with Bar('Processing images', max=len(metadata)) as bar:

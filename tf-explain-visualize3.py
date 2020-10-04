@@ -9,14 +9,7 @@ from utils.constants import IMG_DIMENSIONS
 
 # Load pretrained model or your own
 model = load_model(sys.argv[1])
-
-#model.summary()
-
 explainer = tf_explain.core.grad_cam.GradCAM()
-
-#exit(0)
-#files = os.listdir(sys.argv[2])
-#files = files[:25]
 
 # folgende bilder alle covid positiv
 files = """18121.png
@@ -120,12 +113,11 @@ files = """18121.png
 59832.jpeg
 44196.png""".split("\n")
 print(files)
-from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB,imwrite
+from cv2 import imread, cvtColor, resize, COLOR_BGR2RGB, imwrite
 
 imgdata = []
 for f in files:
     try:
-
         image = imread(path.join('dataset','images', f))
         imwrite(f"heatmapexamples/{f}",image)
         image = cvtColor(image, COLOR_BGR2RGB)
@@ -142,14 +134,13 @@ for layer in model.layers:
         gradcam_layer=layer.name
 
 # Start explainer
-grid = explainer.explain(data, model,class_index=0,layer_name=gradcam_layer)  #
+grid = explainer.explain(data, model, class_index=0, layer_name=gradcam_layer)  #
 from datetime import datetime
 now = datetime.now()
 current_time = now.strftime("%H_%M_%S")
-#saveloc=path.join(path.dirname(args['model']),'visualized')
 saveloc = "heatmapexamples"
 filename = f"{current_time}"
-filename+=".jpg"
+filename += ".jpg"
 try:
     explainer.save(grid,f"{saveloc}", f"{filename}")
     print(f"GradCam image created and saved to {saveloc}/{filename}")

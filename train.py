@@ -13,9 +13,9 @@ parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
 parser.add_argument("-m", "--model", default="VGG16", help=f"specify optional network. ")
 parser.add_argument('-e', '--epochs', default=30, type=int, help='specify how many epochs the network should be trained at max, defaults to 30')
-parser.add_argument('-v','--visualize',type=int, default=16, help='set to run tf-explain as callback, set 0 to deactivate, pos. value take x images, neg. value use all images')
+parser.add_argument('-v','--visualize', type=int, default=16, help='set to run tf-explain as callback, set 0 to deactivate, pos. value take x images, neg. value use all images')
 parser.add_argument('--evaluate', default=0,type=int, help='set to evaluate the network after every x epochs')
-parser.add_argument('-s','--save',default=0, type=int, help='unreliable computer, save current state after every x epochs')
+parser.add_argument('-s','--save', default=0, type=int, help='unreliable computer, save current state after every x epochs')
 parser.add_argument('-a','--autostop', action='store_true', help='set to stop training when val_loss rises')
 args = vars(parser.parse_args())
 
@@ -54,7 +54,6 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sys import stdout
 from utils.evaluation_callback import EvaluationCallback
 
-# from utils.evaluation import evaluate_confusion_matrix, log_confusion_matrix
 from utils.data import *
 
 # set GPU configs, might have to comment out
@@ -83,14 +82,11 @@ else:
     log.info('Model does not exist yet, creating a new one')
     baseModel = modelFunc(weights='imagenet', include_top=False, input_shape=IMG_DIMENSIONS_3D,input_tensor=Input(shape=IMG_DIMENSIONS_3D))
     baseModel.trainable = False
-    #baseModel.summary()
 
     log.info(f'baseModel: {args["model"]}')
 
     # # vgg16 top adapted
-    ## x = Conv2D(128, 3, padding='same',name='conv_gradcam', activation='relu')(baseModel.output)# test
     x = GlobalAveragePooling2D(name='global_avg_pool2d')(baseModel.output)
-    # x = Flatten(name='flatten')(baseModel.output)
     x = Dense(256, activation='relu', name='fc1')(x)
     x = Dropout(0.3, name='dropout1')(x)
     x = Dense(128, activation='relu', name='fc2')(x)
@@ -116,21 +112,18 @@ trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'],
 # %% train model
 
 # initialize the training data augmentation object
-trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wie schief ist so ein röntgenbild wohl maxial aufgenommen worden
-                              horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5; 10 ist denke ich guter Mittelweg
+trainAug = ImageDataGenerator(rotation_range=10,
+                              horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5
                               fill_mode='nearest',    # Testweise bessere performance als constant fill
                               width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
                               height_shift_range=0.2) # Vertikal tendenziell etwas schlechter
-                              #zoom_range=0.2)         # 1.0 +- zoom_range, kann also raus oder reinzoomen
-#trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
 # setup callbacks
-
 from utils.my_gradcam_callback import MyGradCAMCallback
 
-callback_gradcam = MyGradCAMCallback(  # nur bilder mit bestaetigtem corona nehmen?
+callback_gradcam = MyGradCAMCallback(
         validation_data=(valX, valY),
         class_index=0,
         trained_epochs=trainedEpochs,
@@ -144,7 +137,7 @@ callback_modelcheckpoint = ModelCheckpoint(
         save_best_only=True,
         period=args['save'],
     )
-callback_evaluation = EvaluationCallback( # TODO: specify how often inbetween model should be saved!
+callback_evaluation = EvaluationCallback(
         test_data=testData,
         test_labels=testLabels,
         batch_size=BATCH_SIZE,
@@ -188,13 +181,9 @@ epochs = len(model.history.epoch)
 # %% validate model
 
 predictions = np.argmax(model.predict(testData, batch_size=BATCH_SIZE), axis=1)
-report = classification_report(testLabels.argmax(axis=1), predictions, target_names=CLASSES) # TODO: do we even need this?
+report = classification_report(testLabels.argmax(axis=1), predictions, target_names=CLASSES)
 log.info(f'Evaluating trained network\n{report}')
-
 cm = confusion_matrix(testLabels.argmax(axis=1), predictions)
-# evaluation = evaluate_confusion_matrix(cm)
-# log_confusion_matrix(cm)
-# for metric in evaluation: log.info(metric + ': {:.4f}'.format(evaluation[metric]))
 
 # %% serialize model and csv
 
