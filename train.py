@@ -100,14 +100,14 @@ else:
     x = GlobalAveragePooling2D(name='global_avg_pool2d')(baseModel.output)
     # x = Flatten(name='flatten')(baseModel.output)
     x = Dense(256, activation='relu', name='fc1')(x)
-    x = Dropout(0.3)(x)
+    x = Dropout(0.3, name='dropout1')(x)
     x = Dense(128, activation='relu', name='fc2')(x)
-    x = Dropout(0.5)(x)
+    x = Dropout(0.5, name='dropout2')(x)
     x = Dense(3, activation='softmax', name='predictions')(x)
 
     model = Model(inputs=baseModel.input, outputs=x)
-    # model.summary()
-
+    model.summary()
+    exit(0)
     trainEpochs = args['epochs']
     trainedEpochs = 0
     log.info(f'trainEpochs: {trainEpochs}')
@@ -124,13 +124,13 @@ trainX, valX, trainY, valY, testData, testLabels = load_dataset(args['dataset'],
 # %% train model
 
 # initialize the training data augmentation object
-# trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wie schief ist so ein röntgenbild wohl maxial aufgenommen worden
-#                               horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5; 10 ist denke ich guter Mittelweg
-#                               fill_mode='nearest',    # Testweise bessere performance als constant fill
-#                               width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
-#                               height_shift_range=0.2) # Vertikal tendenziell etwas schlechter
-#                               #zoom_range=0.2)         # 1.0 +- zoom_range, kann also raus oder reinzoomen
-trainAug = ImageDataGenerator() # TODO: enable for benchmark training
+trainAug = ImageDataGenerator(rotation_range=10,      # adapt rotation range? wie schief ist so ein röntgenbild wohl maxial aufgenommen worden
+                              horizontal_flip=True,   # cc: die schieferen scheinen so maximal 20, die allermeisten aber <5; 10 ist denke ich guter Mittelweg
+                              fill_mode='nearest',    # Testweise bessere performance als constant fill
+                              width_shift_range=0.1,  # Horizontal sind die Bilder größtenteils gut zentriert
+                              height_shift_range=0.2) # Vertikal tendenziell etwas schlechter
+                              #zoom_range=0.2)         # 1.0 +- zoom_range, kann also raus oder reinzoomen
+#trainAug = ImageDataGenerator() # TODO: enable for benchmark training
 opt = Adam(lr=INIT_LR, decay=INIT_LR / trainEpochs)
 model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
 
