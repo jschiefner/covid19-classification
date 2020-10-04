@@ -25,26 +25,23 @@ from utils.evaluation_callback import EvaluationCallback
 from utils.data import load_dataset
 from utils.constants import *
 from utils.management import *
+from utils.constants import *
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
-parser.add_argument('modelName', help='how your custom model should be called')
+parser.add_argument('-m', '--model', required=True, help='how your custom model should be called')
 args = vars(parser.parse_args())
 
-modelFolderPath = path.join('models', args['modelName'])
+modelFolderPath = path.join('models', args['model'])
 modelDataPath = path.join(modelFolderPath, 'data.csv')
 if check_and_create_folder(modelFolderPath):
-    print(f'The model "{args["modelName"]}" already exists. Please choose another name')
+    print(f'The model "{args["model"]}" already exists. Please choose another name.')
     exit(1)
 
 check_and_create_folder('models') # make sure model directory exists
 printSeparator()
 
 # %% create model
-
-INIT_LR = 1e-3
-BS = 8
-epochs = 10
 
 # build model
 model = models.Sequential()
@@ -56,18 +53,14 @@ model.add(layers.Conv2D(64, (3, 3), activation='relu'))
 model.add(layers.MaxPooling2D((4, 4)))
 model.add(layers.Conv2D(128, (3, 3), activation='relu'))
 model.add(layers.Flatten())
+model.add(layers.GaussianNoise(0.2))
 model.add(layers.Dense(64, activation='relu'))
-model.add(layers.Dropout(0.50))
-model.add(layers.Dense(3, activation="sigmoid"))
+model.add(layers.Dropout(0.30))
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dropout(0.5))
+model.add(layers.Dense(3, activation="softmax"))
 
 model.summary() # prints model summary
-
-optimizer = Adam(lr=INIT_LR, decay=INIT_LR / epochs)
-model.compile(
-    optimizer=optimizer,
-    loss='binary_crossentropy',
-    metrics=['accuracy'],
-)
 
 # %% save model
 
