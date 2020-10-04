@@ -9,7 +9,7 @@ from utils.constants import CLASSES, IMG_DIMENSIONS, BATCH_SIZE
 import logging as log
 from progress.bar import Bar
 
-def load_dataset(datasetPath, validation_after_train_split=0.33):
+def load_dataset(datasetPath, validation_after_train_split=0.1):
     log.info(f'loading data from "{datasetPath}"')
 
     metadata = pd.read_csv(path.join(datasetPath, 'metadata.csv'), usecols=['File', 'No Finding', 'Covid'],

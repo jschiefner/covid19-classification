@@ -26,6 +26,7 @@ plt.style.use('ggplot')
 plt.title(f'Training Loss/Accuracy for {args["model"]} model')
 plt.xlabel('# Epochs')
 plt.ylabel('Loss/Accuracy')
+plt.ylim(0, 1)
 
 plt.plot(epochs, modelData.loss, label='loss')
 plt.plot(epochs, modelData.accuracy, label='accuracy')

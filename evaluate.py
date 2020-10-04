@@ -13,10 +13,10 @@ from sys import stdout
 import tensorflow as tf
 from utils.management import *
 from utils.constants import *
+from utils.data import *
 from progress.bar import Bar
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.metrics import classification_report, confusion_matrix
-
 
 # set GPU configs, might have to comment out
 # these lines if you're working on a cpu
@@ -27,14 +27,18 @@ session = tf.compat.v1.Session(config=config)
 log.basicConfig(
     level=log.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[log.StreamHandler(stdout)]
+    handlers=[
+        log.FileHandler('evaluation.log'),
+        log.StreamHandler(stdout),
+    ]
 )
+
+printSeparator()
 
 # %% parse arguments
 
 parser = ArgumentParser()
 parser.add_argument('dataset', help='path to input folder')
-parser.add_argument('output', help='filepath where output file should be stored')
 parser.add_argument('-m', '--model', required=False, default='all', help='models to be used (uses all it can find by default), possible to specify multiple: -m "VGG16 MobileNetV22"')
 args = vars(parser.parse_args())
 # args = {'dataset': '.', 'output': 'output.csv', 'model': 'VGG16 ResNet50'} # for development
@@ -47,11 +51,6 @@ if not path.isdir(args['dataset']):
 
 metadataPath = path.join(args['dataset'], "metadata.csv")
 check_if_exists_or_exit(metadataPath)
-
-# verify/correct output path
-outpath, ext = path.splitext(args['output'])
-if len(ext) == 0:
-    args['output'] = f'{outpath}.csv'
 
 # check if multiple models given, its ensemble classification then
 if args['model'] == 'all':
@@ -72,18 +71,7 @@ for model in models:
 
 number_of_models = len(models)
 
-# %% load images
-# # evtl abfangen falls nicht bilddateien in diesem pfad liegen?
-# data = []
-# imageList = glob(path.join(args['dataset'], '*'))
-# imageList = imageList[0:500] # TODO: remove this, just for development purposes
-# for file in imageList:
-#     image = imread(file)
-#     image = cvtColor(image, COLOR_BGR2RGB)
-#     image = resize(image, (224, 224))
-#     data.append(image)
-# log.info(f'successfully loaded {len(data)} images from "{args["dataset"]}" directory.')
-# data = np.array(data) / 255.0
+log.info(f'Starting Evaluation with arguments: {args}')
 
 # %% load images for real
 
@@ -92,9 +80,11 @@ metadata = pd.read_csv(
     usecols=['File', 'No Finding', 'Covid'],
     dtype={'File': np.str, 'No Finding': np.bool, 'Covid': np.bool}
 )
-metadata = metadata[1000:1100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
-data = []
-labels = []
+# metadata = metadata[1000:1100] # for now only use 100 samples (10 positive, 90 negative) # TODO: comment out before comitting
+data, labels = [], []
+dataLength = len(metadata)
+splitPoint = dataLength - int(dataLength * 0.1)
+metadata = metadata[splitPoint:]
 with Bar('Loading images', max=len(metadata)) as bar:
     for _idx, (file, noFinding, covid) in metadata.iterrows():
         bar.next()
@@ -110,8 +100,7 @@ with Bar('Loading images', max=len(metadata)) as bar:
 
 data = np.array(data) / 255.0
 labels = np.array(labels)
-dataLength = len(data)
-log.info(f'successfully loaded {dataLength} images')
+log.info(f'successfully loaded {len(metadata)} images')
 
 log.info('encode labels')
 
@@ -119,6 +108,7 @@ log.info('encode labels')
 lb = LabelBinarizer()
 lb.fit(CLASSES) # !!! changes order of classes: covid, other, healthy
 labels = lb.transform(labels)
+
 
 # %% run predictions models
 predictionsList = []
@@ -131,7 +121,6 @@ for modelDataPath, model in zip(modelDataPaths, models):
     log.info(f'successfully loaded "{modelPath}"')
     log.info(f'predicting...')
     predictionsList.append(model.predict(data))
-    log.info(f'done')
 
 predictionsList = np.array(predictionsList)
 summedUpPredictions = predictionsList.sum(axis=0)
@@ -149,3 +138,4 @@ cm = confusion_matrix(
 )
 log.info(f'Classification report:\n{report}')
 log.info(f'Confusion Matrix:\n{cm}')
+printSeparator(with_break=True)
