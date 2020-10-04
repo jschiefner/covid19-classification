@@ -12,12 +12,12 @@ from tensorflow.keras.models import load_model
 from utils.constants import CLASSES, IMG_DIMENSIONS
 
 parser = ArgumentParser()
-parser.add_argument("model", help=f"specify model ")
-parser.add_argument("-c","--classindex",default=0,type=int)
-parser.add_argument("-f","--classfilter",default=-1,type=int)
-parser.add_argument("-l","--limit",default=25,type=int)
-parser.add_argument('-r','--random', action='store_true')
-parser.add_argument('-d','--dataset',default="dataset")
+parser.add_argument("-m", '--model', required=True, help=f"specify model ")
+parser.add_argument("-c", "--classindex", default=0,type=int)
+parser.add_argument("-f", "--classfilter", default=-1,type=int)
+parser.add_argument("-l", "--limit", default=25,type=int)
+parser.add_argument('-r', '--random', action='store_true')
+parser.add_argument('-d', '--dataset', default="dataset")
 args = vars(parser.parse_args())
 
 metadata = pd.read_csv(path.join(args['dataset'], 'metadata.csv'), usecols=['File', 'No Finding', 'Covid'],
